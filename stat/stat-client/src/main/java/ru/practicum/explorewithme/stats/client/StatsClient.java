@@ -19,8 +19,9 @@ public class StatsClient extends BaseClient {
 
     public static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    public StatsClient(@Value("${stats-service.url}") String serverUrl, WebClient.Builder builder) {
-        super(builder.baseUrl(serverUrl).build());
+    public StatsClient(@Value("${stats-service.url:http://stat-server}") String serverUrl,
+                       WebClient.Builder loadBalancedWebClientBuilder) {
+        super(loadBalancedWebClientBuilder.baseUrl(serverUrl).build());
     }
 
     public ResponseEntity<Object> saveHit(EndpointHitDTO hitDto) {

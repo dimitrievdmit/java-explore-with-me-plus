@@ -1,6 +1,4 @@
 spring:
-  application:
-    name: ewm-main-service
   datasource:
     url: jdbc:h2:mem:ewm-test-db
     driver-class-name: org.h2.Driver
@@ -11,10 +9,14 @@ spring:
     hibernate:
       ddl-auto: create-drop
     show-sql: false
-  sql:
-    init:
-      schema-locations: classpath:schema-h2.sql
-      mode: embedded
-
-stats-service:
-  url: http://localhost:9090
+  cloud:
+    loadbalancer:
+      retry:
+        enabled: true
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+    ip-address: 127.0.0.1
