@@ -1,0 +1,28 @@
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: shopping-cart-service
+          uri: lb://shopping-cart
+          predicates:
+            - Path=/api/v1/shopping-cart**
+        - id: shopping-store-service
+          uri: lb://shopping-store
+          predicates:
+            - Path=/api/v1/shopping-store/**
+        - id: warehouse-service
+          uri: lb://warehouse
+          predicates:
+            - Path=/api/v1/warehouse/**            -
+        - id: order-service
+          uri: lb://order
+          predicates:
+            - Path=/api/v1/order/**
+        - id: payment-service
+          uri: lb://payment
+          predicates:
+            - Path=/api/v1/payment/**
+        - id: delivery-service
+          uri: lb://delivery
+          predicates:
+            - Path=/api/v1/delivery/**
