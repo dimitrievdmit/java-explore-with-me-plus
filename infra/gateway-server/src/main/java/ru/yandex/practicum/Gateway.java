@@ -1,13 +1,13 @@
-package ru.practicum.explorewithme.stats;
+package ru.yandex.practicum;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
-@EnableDiscoveryClient
 @SpringBootApplication
-public class StatServerApp {
+@EnableDiscoveryClient
+public class Gateway {
     public static void main(String[] args) {
-        SpringApplication.run(StatServerApp.class, args);
+        SpringApplication.run(Gateway.class, args);
     }
 }

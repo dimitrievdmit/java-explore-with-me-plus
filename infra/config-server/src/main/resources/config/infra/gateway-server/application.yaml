@@ -1,0 +1,14 @@
+server:
+  port: 8080
+
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: false          # отключено, чтобы не публиковать stat-server
+      routes:
+        - id: main-service-route
+          uri: lb://main-service
+          predicates:
+            - Path=/**            # до деления на микросервисы все запросы перенаправляем в main-service
