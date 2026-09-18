@@ -6,9 +6,24 @@ spring:
     gateway:
       discovery:
         locator:
-          enabled: false          # отключено, чтобы не публиковать stat-server
+          enabled: false
       routes:
-        - id: main-service-route
-          uri: lb://main-service
+        - id: request-service-route
+          uri: lb://request-service
           predicates:
-            - Path=/**            # до деления на микросервисы все запросы перенаправляем в main-service
+            - Path=/users/*/requests/**,/users/*/events/*/requests/**
+
+        - id: event-service-route
+          uri: lb://event-service
+          predicates:
+            - Path=/admin/categories/**,/categories/**,/admin/compilations/**,/compilations/**,/admin/events/**,/events/**,/users/*/events/**
+
+        - id: user-service-route
+          uri: lb://user-service
+          predicates:
+            - Path=/admin/users/**
+
+        - id: location-service-route
+          uri: lb://location-service
+          predicates:
+            - Path=/admin/locations/**

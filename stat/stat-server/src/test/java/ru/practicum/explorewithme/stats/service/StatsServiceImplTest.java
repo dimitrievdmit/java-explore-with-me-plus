@@ -7,8 +7,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import ru.practicum.explorewithme.stats.dto.EndpointHitDTO;
-import ru.practicum.explorewithme.stats.dto.ViewStatsDTO;
+import ru.practicum.explorewithme.interaction.dto.EndpointHitDto;
+import ru.practicum.explorewithme.interaction.dto.ViewStatsDto;
 import ru.practicum.explorewithme.stats.model.EndpointHit;
 import ru.practicum.explorewithme.stats.repository.StatsRepository;
 
@@ -29,13 +29,13 @@ class StatsServiceImplTest {
     @InjectMocks
     private StatsServiceImpl statsService;
 
-    private EndpointHitDTO hitDTO;
+    private EndpointHitDto hitDTO;
     private LocalDateTime start;
     private LocalDateTime end;
 
     @BeforeEach
     void setUp() {
-        hitDTO = new EndpointHitDTO(null, "ewm-main-service", "/events", "127.0.0.1",
+        hitDTO = new EndpointHitDto(null, "ewm-main-service", "/events", "127.0.0.1",
                 LocalDateTime.of(2025, 5, 5, 12, 0, 0));
         start = LocalDateTime.of(2020, 5, 5, 0, 0, 0);
         end = LocalDateTime.of(2030, 5, 5, 0, 0, 0);
@@ -58,7 +58,7 @@ class StatsServiceImplTest {
     // --- getStats: выбор метода в зависимости от unique ---
     @Test
     void getStats_UniqueTrue_ShouldCallUniqueQuery() {
-        List<ViewStatsDTO> expected = List.of(new ViewStatsDTO("app", "/uri", 1L));
+        List<ViewStatsDto> expected = List.of(new ViewStatsDto("app", "/uri", 1L));
         when(statsRepository.getStatsUnique(any(), any(), any())).thenReturn(expected);
 
         var result = statsService.getStats(start, end, List.of("/uri"), true);
@@ -70,7 +70,7 @@ class StatsServiceImplTest {
 
     @Test
     void getStats_UniqueFalse_ShouldCallNotUniqueQuery() {
-        List<ViewStatsDTO> expected = List.of(new ViewStatsDTO("app", "/uri", 3L));
+        List<ViewStatsDto> expected = List.of(new ViewStatsDto("app", "/uri", 3L));
         when(statsRepository.getStatsNotUnique(any(), any(), any())).thenReturn(expected);
 
         var result = statsService.getStats(start, end, List.of("/uri"), false);

@@ -4,8 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.explorewithme.stats.dto.EndpointHitDTO;
-import ru.practicum.explorewithme.stats.dto.ViewStatsDTO;
+import ru.practicum.explorewithme.interaction.dto.EndpointHitDto;
+import ru.practicum.explorewithme.interaction.dto.ViewStatsDto;
 import ru.practicum.explorewithme.stats.mapper.EndpointHitMapper;
 import ru.practicum.explorewithme.stats.model.EndpointHit;
 import ru.practicum.explorewithme.stats.repository.StatsRepository;
@@ -23,7 +23,7 @@ public class StatsServiceImpl implements StatsService {
 
     @Override
     @Transactional
-    public void hit(EndpointHitDTO endpointHitDTO) {
+    public void hit(EndpointHitDto endpointHitDTO) {
         log.info("Сохранение информации о запросе к эндпоинту: app={}, uri={}",
                 endpointHitDTO.getApp(), endpointHitDTO.getUri());
 
@@ -34,7 +34,7 @@ public class StatsServiceImpl implements StatsService {
     }
 
     @Override
-    public List<ViewStatsDTO> getStats(LocalDateTime start,
+    public List<ViewStatsDto> getStats(LocalDateTime start,
                                        LocalDateTime end,
                                        List<String> uris,
                                        Boolean unique) {
@@ -44,7 +44,7 @@ public class StatsServiceImpl implements StatsService {
         // Фильтрация и нормализация списка URI
         List<String> filteredUris = normalizeUris(uris);
 
-        List<ViewStatsDTO> result;
+        List<ViewStatsDto> result;
         if (Boolean.TRUE.equals(unique)) {
             result = statsRepository.getStatsUnique(start, end, filteredUris);
         } else {
