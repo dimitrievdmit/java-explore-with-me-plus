@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import ru.practicum.explorewithme.stats.dto.ViewStatsDTO;
+import ru.practicum.explorewithme.interaction.dto.ViewStatsDto;
 import ru.practicum.explorewithme.stats.model.EndpointHit;
 
 import java.time.LocalDateTime;
@@ -49,7 +49,7 @@ class StatsRepositoryTest {
         createHit("ewm-main-service", "/events", "192.168.0.2", baseTime.plusMinutes(1));
         createHit("ewm-main-service", "/events/5", "10.0.0.1", baseTime);
 
-        List<ViewStatsDTO> stats = statsRepository.getStatsNotUnique(
+        List<ViewStatsDto> stats = statsRepository.getStatsNotUnique(
                 baseTime.minusDays(1), baseTime.plusDays(1), null);
 
         assertThat(stats).hasSize(2);
@@ -67,11 +67,11 @@ class StatsRepositoryTest {
         createHit("ewm-main-service", "/events/1", "2.2.2.2", baseTime);
         createHit("ewm-main-service", "/events/2", "3.3.3.3", baseTime);
 
-        List<ViewStatsDTO> stats = statsRepository.getStatsNotUnique(
+        List<ViewStatsDto> stats = statsRepository.getStatsNotUnique(
                 baseTime.minusDays(1), baseTime.plusDays(1), List.of("/events", "/events/1"));
 
         assertThat(stats).hasSize(2);
-        assertThat(stats).extracting(ViewStatsDTO::getUri).containsExactlyInAnyOrder("/events", "/events/1");
+        assertThat(stats).extracting(ViewStatsDto::getUri).containsExactlyInAnyOrder("/events", "/events/1");
     }
 
     @Test
@@ -80,7 +80,7 @@ class StatsRepositoryTest {
         createHit("app", "/a", "1.1.1.2", baseTime);
         createHit("app", "/a", "1.1.1.3", baseTime.plusHours(1));
 
-        List<ViewStatsDTO> stats = statsRepository.getStatsNotUnique(
+        List<ViewStatsDto> stats = statsRepository.getStatsNotUnique(
                 baseTime, baseTime.plusMinutes(30), null);
 
         // Ожидаем только хит, который попадает в [baseTime, baseTime+30min]
@@ -94,7 +94,7 @@ class StatsRepositoryTest {
         createHit("app", "/a", "1.1.1.1", baseTime);
         createHit("app", "/a", "1.1.1.2", baseTime.plusDays(1));
 
-        List<ViewStatsDTO> stats = statsRepository.getStatsNotUnique(
+        List<ViewStatsDto> stats = statsRepository.getStatsNotUnique(
                 baseTime, baseTime.plusDays(1), null);
         assertThat(stats).hasSize(1);
         assertThat(stats.getFirst().getHits()).isEqualTo(2L); // оба входят
@@ -102,7 +102,7 @@ class StatsRepositoryTest {
 
     @Test
     void getStatsNotUnique_EmptyResult() {
-        List<ViewStatsDTO> stats = statsRepository.getStatsNotUnique(
+        List<ViewStatsDto> stats = statsRepository.getStatsNotUnique(
                 baseTime.minusDays(1), baseTime.plusDays(1), null);
         assertThat(stats).isEmpty();
     }
@@ -115,7 +115,7 @@ class StatsRepositoryTest {
         createHit("ewm-main-service", "/events", "192.168.0.1", baseTime.plusMinutes(1));
         createHit("ewm-main-service", "/events", "10.0.0.1", baseTime);
 
-        List<ViewStatsDTO> stats = statsRepository.getStatsUnique(
+        List<ViewStatsDto> stats = statsRepository.getStatsUnique(
                 baseTime.minusDays(1), baseTime.plusDays(1), null);
 
         assertThat(stats).hasSize(1);
@@ -130,7 +130,7 @@ class StatsRepositoryTest {
         createHit("app", "/b", "ip3", baseTime);
         createHit("app", "/b", "ip4", baseTime);
 
-        List<ViewStatsDTO> stats = statsRepository.getStatsUnique(
+        List<ViewStatsDto> stats = statsRepository.getStatsUnique(
                 baseTime.minusDays(1), baseTime.plusDays(1), null);
 
         assertThat(stats).hasSize(2);

@@ -8,8 +8,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import ru.practicum.explorewithme.stats.dto.EndpointHitDTO;
-import ru.practicum.explorewithme.stats.dto.ViewStatsDTO;
+import ru.practicum.explorewithme.interaction.dto.EndpointHitDto;
+import ru.practicum.explorewithme.interaction.dto.ViewStatsDto;
 import ru.practicum.explorewithme.stats.service.StatsService;
 
 import java.time.LocalDateTime;
@@ -38,14 +38,14 @@ class StatsControllerTest {
     @MockBean
     private StatsService statsService;
 
-    private EndpointHitDTO validHit;
-    private ViewStatsDTO statsEntry;
+    private EndpointHitDto validHit;
+    private ViewStatsDto statsEntry;
 
     @BeforeEach
     void setUp() {
-        validHit = new EndpointHitDTO(null, "ewm-main-service", "/events", "121.0.0.1",
+        validHit = new EndpointHitDto(null, "ewm-main-service", "/events", "121.0.0.1",
                 LocalDateTime.of(2025, 5, 5, 12, 0, 0));
-        statsEntry = new ViewStatsDTO("ewm-main-service", "/events", 5L);
+        statsEntry = new ViewStatsDto("ewm-main-service", "/events", 5L);
     }
 
     // --- POST /hit ---
@@ -56,7 +56,7 @@ class StatsControllerTest {
                         .content(objectMapper.writeValueAsString(validHit)))
                 .andExpect(status().isCreated());
 
-        verify(statsService).hit(any(EndpointHitDTO.class));
+        verify(statsService).hit(any(EndpointHitDto.class));
     }
 
     @Test

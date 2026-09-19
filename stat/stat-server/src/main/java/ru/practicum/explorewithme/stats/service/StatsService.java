@@ -1,7 +1,8 @@
 package ru.practicum.explorewithme.stats.service;
 
-import ru.practicum.explorewithme.stats.dto.EndpointHitDTO;
-import ru.practicum.explorewithme.stats.dto.ViewStatsDTO;
+
+import ru.practicum.explorewithme.interaction.dto.EndpointHitDto;
+import ru.practicum.explorewithme.interaction.dto.ViewStatsDto;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,7 +14,7 @@ public interface StatsService {
      *
      * @param endpointHitDTO данные запроса (app, uri, ip, timestamp)
      */
-    void hit(EndpointHitDTO endpointHitDTO);
+    void hit(EndpointHitDto endpointHitDTO);
 
     /**
      * Получить статистику по посещениям за указанный период.
@@ -24,7 +25,7 @@ public interface StatsService {
      * @param unique учитывать только уникальные IP (true — да, false/null — нет)
      * @return список объектов статистики, отсортированный по убыванию количества просмотров
      */
-    List<ViewStatsDTO> getStats(LocalDateTime start,
+    List<ViewStatsDto> getStats(LocalDateTime start,
                                 LocalDateTime end,
                                 List<String> uris,
                                 Boolean unique);
