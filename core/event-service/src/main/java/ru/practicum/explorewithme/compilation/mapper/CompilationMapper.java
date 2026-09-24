@@ -26,7 +26,7 @@ public final class CompilationMapper {
                                        Map<Long, Long> confirmedRequests) {
         List<EventShortDto> events = compilation.getEvents().stream()
                 .map(e -> EventMapper.toShortDto(e, initiators.get(e.getInitiatorId()),
-                        confirmedRequests.getOrDefault(e.getId(), 0L), 0L))
+                        confirmedRequests.getOrDefault(e.getId(), 0L), 0.0))
                 .collect(Collectors.toList());
 
         return CompilationDto.builder().id(compilation.getId()).title(compilation.getTitle())

@@ -59,3 +59,11 @@ resilience4j:
         base-config: default
       event-service:
         base-config: default
+
+grpc:
+  client:
+    collector:
+      address: discovery:///collector
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+      negotiationType: plaintext

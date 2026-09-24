@@ -29,7 +29,7 @@ class EventShortDtoJsonTest {
                 .initiator(new UserShortDto(3L, "Иван Иванов"))
                 .paid(false)
                 .title("Short title")
-                .views(10L)
+                .rating(10.0)
                 .build();
 
         var json = jacksonTester.write(dto);

@@ -12,6 +12,8 @@ import ru.practicum.explorewithme.interaction.exception.ConflictException;
 import ru.practicum.explorewithme.interaction.exception.NotFoundException;
 import ru.practicum.explorewithme.interaction.feign.EventClient;
 import ru.practicum.explorewithme.interaction.feign.UserClient;
+import ru.practicum.explorewithme.interaction.grpc.CollectorGrpcClient;
+import ru.practicum.ewm.stats.proto.collector.ActionTypeProto;
 import ru.practicum.explorewithme.request.dal.EventRequestRepository;
 import ru.practicum.explorewithme.request.dto.EventRequestStatusUpdateRequest;
 import ru.practicum.explorewithme.request.dto.EventRequestStatusUpdateResult;
@@ -33,6 +35,7 @@ public class EventRequestServiceImpl implements EventRequestService {
     private final EventRequestRepository eventRequestRepository;
     private final EventClient eventClient;
     private final UserClient userClient;
+    private final CollectorGrpcClient collectorGrpcClient;
 
     @Override
     public List<ParticipationRequestDto> getEventRequests(Long userId, Long eventId) {
@@ -185,7 +188,10 @@ public class EventRequestServiceImpl implements EventRequestService {
         } else {
             throw new ConflictException("Количество участников события не может превышать " + event.getParticipantLimit());
         }
-        return ParticipationRequestMapper.toDto(eventRequestRepository.save(request));
+        ParticipationRequest savedRequest = eventRequestRepository.save(request);
+        collectorGrpcClient.collectUserAction(userId, eventId, ActionTypeProto.ACTION_REGISTER,
+                java.time.Instant.now());
+        return ParticipationRequestMapper.toDto(savedRequest);
     }
 
     @Override

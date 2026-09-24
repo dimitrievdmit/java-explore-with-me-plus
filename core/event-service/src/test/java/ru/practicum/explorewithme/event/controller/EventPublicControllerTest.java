@@ -64,9 +64,9 @@ public class EventPublicControllerTest {
     }
 
     @Test
-    void shouldReturnEventWithViews() throws Exception {
+    void shouldReturnEventWithRating() throws Exception {
         Long eventId = 1L;
-        EventFullDto event = EventFullDto.builder().id(eventId).createdOn("2025-01-01 10:00:00").views(5L).build();
+        EventFullDto event = EventFullDto.builder().id(eventId).createdOn("2025-01-01 10:00:00").rating(5.0).build();
 
         when(appProperties.getName()).thenReturn("event-service");
         when(eventService.getEventPublic(eventId)).thenReturn(event);

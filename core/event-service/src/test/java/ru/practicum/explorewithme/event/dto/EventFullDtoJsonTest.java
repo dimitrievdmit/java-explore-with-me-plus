@@ -34,7 +34,7 @@ class EventFullDtoJsonTest {
                 .requestModeration(true)
                 .state(EventState.PUBLISHED)
                 .title("Test title")
-                .views(15L)
+                .rating(15.0)
                 .build();
 
         var json = jacksonTester.write(dto);
