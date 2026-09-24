@@ -1,12 +1,6 @@
 package ru.practicum.explorewithme.event.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,6 +8,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
+//ToDo добавить создание таблицы event_views в schema.sql
 @Entity
 @Table(name = "event_views", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "event_id"}))
 @NoArgsConstructor

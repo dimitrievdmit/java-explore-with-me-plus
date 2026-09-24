@@ -1,6 +1,7 @@
 package ru.practicum.explorewithme.stats.aggregator.service;
 
 import org.springframework.stereotype.Component;
+import ru.practicum.explorewithme.stats.common.service.ActionWeightResolver;
 import ru.practicum.ewm.stats.avro.EventSimilarityAvro;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
 
@@ -11,19 +12,19 @@ import java.util.Map;
 
 @Component
 public class SimilarityCalculator {
-    private final ActionWeightProvider weightProvider;
+    private final ActionWeightResolver weightResolver;
     private final Map<Long, Map<Long, Double>> userEventWeights = new HashMap<>();
     private final Map<Long, Double> eventWeightSums = new HashMap<>();
     private final Map<Long, Map<Long, Double>> minWeightsSums = new HashMap<>();
 
-    public SimilarityCalculator(ActionWeightProvider weightProvider) {
-        this.weightProvider = weightProvider;
+    public SimilarityCalculator(ActionWeightResolver weightResolver) {
+        this.weightResolver = weightResolver;
     }
 
     public synchronized List<EventSimilarityAvro> process(UserActionAvro action) {
         long eventId = action.getEventId();
         long userId = action.getUserId();
-        double newWeight = weightProvider.getWeight(action.getActionType());
+        double newWeight = weightResolver.getWeight(action.getActionType());
 
         Map<Long, Double> eventUsers = userEventWeights.computeIfAbsent(eventId, key -> new HashMap<>());
         double oldWeight = eventUsers.getOrDefault(userId, 0.0);
@@ -33,6 +34,9 @@ public class SimilarityCalculator {
 
         List<Long> otherEvents = new ArrayList<>(eventWeightSums.keySet());
         for (Long otherEvent : otherEvents) {
+            if (otherEvent == eventId) {
+                continue;
+            }
             Double otherWeight = userEventWeights.get(otherEvent).get(userId);
             if (otherWeight == null) {
                 continue;
@@ -50,7 +54,7 @@ public class SimilarityCalculator {
         java.time.Instant timestamp = action.getTimestamp();
         List<EventSimilarityAvro> result = new ArrayList<>();
         for (Long otherEvent : otherEvents) {
-            if (!userEventWeights.containsKey(otherEvent)) {
+            if (otherEvent == eventId || !userEventWeights.containsKey(otherEvent)) {
                 continue;
             }
             double score = calculateScore(eventId, otherEvent);

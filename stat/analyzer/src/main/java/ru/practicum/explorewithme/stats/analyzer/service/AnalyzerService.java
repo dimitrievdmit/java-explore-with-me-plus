@@ -11,6 +11,7 @@ import ru.practicum.explorewithme.stats.analyzer.model.UserEventInteraction;
 import ru.practicum.explorewithme.stats.analyzer.model.UserEventInteractionId;
 import ru.practicum.explorewithme.stats.analyzer.repository.EventSimilarityRepository;
 import ru.practicum.explorewithme.stats.analyzer.repository.UserEventInteractionRepository;
+import ru.practicum.explorewithme.stats.common.service.ActionWeightResolver;
 
 import java.util.*;
 

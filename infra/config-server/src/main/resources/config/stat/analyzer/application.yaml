@@ -3,6 +3,10 @@ server:
 spring:
   application:
     name: analyzer
+  sql:
+    init:
+      mode: always
+      continue-on-error: true
   datasource:
     url: jdbc:postgresql://localhost:5432/ewm_stats_db
     username: postgres
@@ -27,12 +31,6 @@ kafka:
 grpc:
   server:
     port: 0
-
-stats:
-  action-weights:
-    view: 0.4
-    register: 0.8
-    like: 1.0
 
 recommendations:
   neighbor-count: 5

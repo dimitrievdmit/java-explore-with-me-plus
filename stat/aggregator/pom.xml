@@ -17,6 +17,11 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>ru.practicum</groupId>
+            <artifactId>stat-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
             <version>${kafka-clients.version}</version>

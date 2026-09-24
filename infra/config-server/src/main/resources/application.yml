@@ -10,6 +10,7 @@ spring:
           searchLocations:
             - classpath:config/core/{application}
             - classpath:config/infra/{application}
+            - classpath:config/stat
             - classpath:config/stat/{application}
 
 server:

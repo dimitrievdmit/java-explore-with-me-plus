@@ -1,638 +1,195 @@
 # Explore With Me Plus
 
-## О проекте
-
-Explore With Me Plus - распределенное Spring Boot приложение для работы с событиями, пользователями, заявками на участие, локациями и статистикой просмотров.
-
-Проект разделен на несколько Maven модулей:
-
-- `core` - бизнес сервисы и общий модуль внутренних API.
-- `infra` - инфраструктурные сервисы Spring Cloud.
-- `stat` - сервис статистики.
-
-Основные технологии:
-
-- Java 21.
-- Spring Boot 3.3.2.
-- Spring Cloud 2023.0.3.
-- Spring Web.
-- Spring Data JPA.
-- PostgreSQL.
-- Spring Cloud OpenFeign.
-- Eureka Service Discovery.
-- Spring Cloud Config.
-- Spring Cloud Gateway.
-- Resilience4j.
+Проект представляет микросервисное приложение Explore With Me с рекомендательной системой.
 
 ## Архитектура
 
-В системе используются отдельные сервисы с собственными зонами ответственности.
+В проекте используются Config Server и Eureka Discovery Server. Core сервисы работают через HTTP REST и внутренние Feign API. Рекомендательная часть использует gRPC для синхронного обмена и Apache Kafka для потоковой обработки действий пользователей.
 
-```text
-                         +----------------------+
-                         |      Client          |
-                         +----------+-----------+
-                                    |
-                                    v
-                         +----------------------+
-                         |    gateway-server    |
-                         |       port 8080      |
-                         +----------+-----------+
-                                    |
-                +-------------------+-------------------+
-                |                   |                   |
-                v                   v                   v
-       +----------------+  +----------------+  +----------------+
-       | event-service  |  | request-service|  |  user-service  |
-       +-------+--------+  +--------+-------+  +----------------+
-               |                    |
-               |                    |
-               |              +-----+-----+
-               |              |           |
-               v              v           v
-       +---------------+  +----------+  +----------+
-       |  stat-server  |  |  event   |  |   user   |
-       +---------------+  | service  |  | service  |
-                          +----------+  +----------+
+### Core сервисы
 
-       +----------------+
-       |location-service|
-       +-------+--------+
-               |
-               v
-       +----------------+
-       | event-service  |
-       +----------------+
+- event-service - события, публичный поиск событий, выдача рейтинга и рекомендаций, отправка действий VIEW и LIKE в Collector.
+- request-service - заявки на участие. После создания заявки отправляет действие REGISTER в Collector.
+- user-service - пользователи.
+- location-service - геоданные и поиск событий по радиусу.
+- interaction-api - общие DTO, Feign клиенты и gRPC клиенты для core сервисов.
 
-       +----------------+       +----------------+
-       | discovery-server|      |  config-server |
-       |    port 8761    |      | Spring Config  |
-       +----------------+       +----------------+
+### Сервисы рекомендательной системы
+
+- collector - принимает UserActionProto по gRPC и публикует UserActionAvro в stats.user-actions.v1.
+- aggregator - читает stats.user-actions.v1, поддерживает агрегированные суммы весов и считает косинусное сходство мероприятий, после чего пишет EventSimilarityAvro в stats.events-similarity.v1.
+- analyzer - читает оба топика, хранит историю взаимодействий и сходства в PostgreSQL и предоставляет gRPC API для рекомендаций.
+- common - общий модуль с ActionWeightResolver и настройками, поступающими из Config Server.
+
+### Поток данных
+
+1. Пользователь открывает опубликованное мероприятие.
+2. event-service отправляет в Collector действие ACTION_VIEW.
+3. Пользователь создает заявку.
+4. request-service отправляет в Collector действие ACTION_REGISTER.
+5. Пользователь ставит лайк после просмотра мероприятия.
+6. event-service отправляет в Collector действие ACTION_LIKE.
+7. Collector преобразует Proto сообщение в Avro сообщение и пишет его в Kafka.
+8. Aggregator обновляет состояние и публикует новые значения сходства.
+9. Analyzer обновляет PostgreSQL и отвечает на gRPC запросы core сервисов.
+
+## Kafka
+
+Для локального запуска Kafka используется compose.yaml.
+
+После запуска создаются топики:
+
+- stats.user-actions.v1
+- stats.events-similarity.v1
+
+Пример запуска:
+
+```bash
+docker compose up -d
 ```
 
-### Инфраструктурные сервисы
+При запуске Java сервисов с хоста используется `localhost:9092`. Для контейнеризированных приложений внутри той же Docker сети адрес Kafka должен быть `kafka:29092`.
 
-`discovery-server`
+## Proto и gRPC
 
-Eureka Server. Хранит реестр зарегистрированных сервисов и позволяет клиентам находить сервисы по имени.
+Исходные Proto схемы находятся в `stat/serialization/proto-schemas/src/main/protobuf`.
 
-Конфигурация:
+### Collector
 
-`infra/discovery-server/src/main/resources/application.yml`
+Пакет gRPC сервиса: `stats.service.collector`.
 
-Основной порт:
+Метод:
 
-`8761`
+`CollectUserAction(UserActionProto) -> Empty`
 
-`config-server`
+`UserActionProto` содержит `user_id`, `event_id`, `action_type` и `timestamp`.
 
-Spring Cloud Config Server. Раздает централизованные настройки сервисов из каталогов внутри classpath.
+### Analyzer
 
-Конфигурация самого сервера:
+Пакет gRPC сервиса: `stats.service.dashboard`.
 
-`infra/config-server/src/main/resources/application.yml`
+Методы:
 
-Каталоги конфигурации:
+- `GetRecommendationsForUser`
+- `GetSimilarEvents`
+- `GetInteractionsCount`
 
-`infra/config-server/src/main/resources/config/core/{application}/application.yaml`
+Все методы Analyzer возвращают поток `RecommendedEventProto`.
 
-`infra/config-server/src/main/resources/config/infra/{application}/application.yaml`
+Клиенты находятся в `core/interaction-api/src/main/java/ru/practicum/explorewithme/interaction/grpc`.
 
-`infra/config-server/src/main/resources/config/stat/{application}/application.yaml`
+Для discovery используется адрес вида `discovery:///analyzer` или `discovery:///collector`.
 
-`gateway-server`
+## Avro
 
-Spring Cloud Gateway. Принимает внешние HTTP запросы на порту `8080` и направляет их в нужный сервис через балансировку `lb://...`.
+Исходная Avro схема находится в `stat/serialization/avro-schemas/src/main/avro/stats.avdl`.
 
-Конфигурация:
+Namespace: `ru.practicum.ewm.stats.avro`.
 
-`infra/gateway-server/src/main/resources/application.yml`
+Типы сообщений:
 
-Центральная конфигурация маршрутов:
+- `UserActionAvro`
+- `EventSimilarityAvro`
+- `ActionTypeAvro`
 
-`infra/config-server/src/main/resources/config/infra/gateway-server/application.yaml`
+Kafka работает с двоичной Avro сериализацией без внешнего Schema Registry.
 
-Маршруты:
+## Алгоритм Aggregator
 
-- `/admin/categories/**`, `/categories/**`, `/admin/compilations/**`, `/compilations/**`, `/admin/events/**`, `/events/**`, `/users/*/events/**` -> `event-service`
-- `/users/*/requests/**`, `/users/*/events/*/requests/**` -> `request-service`
-- `/admin/users/**` -> `user-service`
-- `/admin/locations/**` -> `location-service`
+Для каждого мероприятия хранится отображение пользователь -> максимальный вес его действия.
 
-### Бизнес сервисы
+Для каждого мероприятия хранится сумма весов пользователей. Для каждой пары мероприятий хранится сумма минимальных весов общих пользователей.
 
-`event-service`
+Коэффициент сходства считается по формуле:
 
-Отвечает за:
+`S_min(A,B) / (sqrt(S_A) * sqrt(S_B))`
 
-- категории;
-- события;
-- подборки событий;
-- публичное и административное управление событиями;
-- обогащение данных события информацией о пользователе, заявках и просмотрах.
+Пара мероприятий всегда сохраняется в каноническом порядке: сначала меньший идентификатор, затем больший.
 
-Класс запуска:
+При повторном действии сходство пересчитывается только для затронутого мероприятия. Если максимальный вес действия пользователя не изменился, пересчет не выполняется. Пара мероприятия с самим собой не создается.
 
-`core/event-service/src/main/java/ru/practicum/explorewithme/EventServiceApp.java`
+Веса действий хранятся в одном общем внешнем конфиге Config Server:
 
-Конфигурация загрузки:
+`infra/config-server/src/main/resources/config/stat/application.yaml`
 
-`core/event-service/src/main/resources/application.yaml`
+Текущие значения:
 
-Центральная конфигурация:
+- VIEW = 0.4
+- REGISTER = 0.8
+- LIKE = 1.0
 
-`infra/config-server/src/main/resources/config/core/event-service/application.yaml`
+Класс `ActionWeightResolver` находится в общем модуле `stat/common` и используется Aggregator и Analyzer.
 
-`request-service`
+## Алгоритмы Analyzer
 
-Отвечает за заявки пользователей на участие в событиях.
+### Похожие мероприятия
 
-Класс запуска:
+Analyzer получает все коэффициенты пар с указанным мероприятием, исключает мероприятия, с которыми пользователь уже взаимодействовал, сортирует по коэффициенту сходства и возвращает первые N.
 
-`core/request-service/src/main/java/ru/practicum/explorewithme/RequestServiceApp.java`
+### Персональные рекомендации
 
-Конфигурация загрузки:
+1. Выбираются последние взаимодействия пользователя.
+2. Для них находятся похожие мероприятия, с которыми пользователь еще не взаимодействовал.
+3. Для каждого кандидата выбираются наиболее похожие уже просмотренные пользователем мероприятия.
+4. Вычисляется взвешенная оценка кандидата.
+5. Кандидаты сортируются по оценке.
 
-`core/request-service/src/main/resources/application.yaml`
+### Сумма взаимодействий
 
-Центральная конфигурация:
+Для каждого переданного мероприятия Analyzer возвращает сумму максимальных весов действий всех пользователей.
 
-`infra/config-server/src/main/resources/config/core/request-service/application.yaml`
+Таблицы Analyzer создаются из `stat/analyzer/src/main/resources/schema.sql`. Скрипт использует `CREATE TABLE IF NOT EXISTS` и `CREATE INDEX IF NOT EXISTS`.
 
-`user-service`
+## Изменения event-service
 
-Отвечает за пользователей.
+- Поле `views` заменено на `rating`.
+- `GET /events` больше не отправляет VIEW.
+- `GET /events/{eventId}` требует заголовок `X-EWM-USER-ID` и отправляет VIEW в Collector.
+- Добавлен `GET /events/recommendations`.
+- Добавлен `PUT /events/{eventId}/like`.
+- Лайк разрешен только пользователю, который ранее посещал страницу мероприятия.
 
-Класс запуска:
-
-`core/user-service/src/main/java/ru/practicum/explorewithme/UserServiceApp.java`
-
-Конфигурация загрузки:
-
-`core/user-service/src/main/resources/application.yaml`
-
-Центральная конфигурация:
-
-`infra/config-server/src/main/resources/config/core/user-service/application.yaml`
-
-`location-service`
-
-Отвечает за административные локации и поиск событий в заданном радиусе.
-
-Класс запуска:
-
-`core/location-service/src/main/java/ru/practicum/explorewithme/LocationServiceApp.java`
-
-Конфигурация загрузки:
-
-`core/location-service/src/main/resources/application.yaml`
-
-Центральная конфигурация:
-
-`infra/config-server/src/main/resources/config/core/location-service/application.yaml`
-
-`stat-server`
-
-Отвечает за запись хитов и получение статистики по URI.
-
-Класс запуска:
-
-`stat/stat-server/src/main/java/ru/practicum/explorewithme/stats/StatServerApp.java`
-
-Конфигурация загрузки:
-
-`stat/stat-server/src/main/resources/application.yaml`
-
-Центральная конфигурация:
-
-`infra/config-server/src/main/resources/config/stat/stat-server/application.yaml`
-
-### Общий модуль interaction-api
-
-Модуль:
-
-`core/interaction-api`
-
-Содержит единые контракты внутренних HTTP API:
-
-`core/interaction-api/src/main/java/ru/practicum/explorewithme/interaction/api`
-
-Также здесь находятся:
-
-- DTO для обмена между сервисами;
-- Feign клиенты;
-- fallback фабрики;
-- обработка ошибок Feign;
-- общая конфигурация Feign.
-
-Сервисы используют `@FeignClient` с именами:
-
-- `event-service`
-- `request-service`
-- `user-service`
-- `stat-server`
-
-Благодаря Eureka адрес сервиса определяется по имени, поэтому в бизнес коде не задаются фиксированные адреса и порты.
-
-## Взаимодействие сервисов
-
-Основные зависимости между сервисами:
-
-```text
-event-service -> user-service
-event-service -> request-service
-event-service -> stat-server
-
-request-service -> user-service
-request-service -> event-service
-
-location-service -> event-service
-```
-
-### event-service -> user-service
-
-Используется для получения данных инициаторов событий.
-
-```text
-GET /internal/users/{userId}
-GET /internal/users?ids={id1}&ids={id2}
-```
-
-Для списков используется батч запрос по нескольким идентификаторам, чтобы не делать отдельный HTTP вызов для каждого события.
-
-### event-service -> request-service
-
-Используется для получения количества подтвержденных заявок по списку событий.
-
-```text
-POST /internal/requests/confirmed-counts
-```
-
-Запрос передает список `eventIds`, ответ содержит пары `eventId` и `count`.
-
-Батч API используется для уменьшения количества межсервисных запросов при выдаче списка событий.
-
-### event-service -> stat-server
-
-Используется в двух сценариях:
-
-- запись факта обращения к публичным URI;
-- получение числа просмотров событий.
-
-```text
-POST /hit
-GET /stats
-```
-
-При запросе публичных событий `event-service` отправляет в `stat-server` данные о URI, IP и времени запроса.
-
-### request-service -> user-service
-
-Используется для проверки существования пользователя и получения его кратких данных.
-
-```text
-GET /internal/users/{userId}
-```
-
-### request-service -> event-service
-
-Используется для получения сведений о событии перед созданием или изменением заявки.
-
-```text
-GET /internal/events/{eventId}
-```
-
-В ответе доступны данные, необходимые для бизнес проверки:
-
-- идентификатор события;
-- идентификатор инициатора;
-- состояние события;
-- лимит участников;
-- признак модерации заявок.
-
-### location-service -> event-service
-
-`location-service` хранит административные локации.
-
-Поиск событий по радиусу выполняется через внутренний API `event-service`:
-
-```text
-GET /internal/events/search-by-radius
-```
-
-Параметры:
-
-- `lat` - широта центра поиска;
-- `lon` - долгота центра поиска;
-- `radius` - радиус поиска;
-- `from` - смещение;
-- `size` - размер страницы.
-
-## Внутренний API
-
-Контракты внутренних API находятся в модуле:
-
-`core/interaction-api`
-
-### API event-service
-
-#### Получить данные события для других сервисов
-
-```text
-GET /internal/events/{eventId}
-```
-
-Ответ: `EventInternalDto`.
-
-Поля:
-
-```text
-id
-initiatorId
-state
-participantLimit
-requestModeration
-```
-
-Основной потребитель: `request-service`.
-
-#### Найти события по радиусу
-
-```text
-GET /internal/events/search-by-radius
-```
-
-Параметры:
-
-```text
-lat
-lon
-radius
-from
-size
-```
-
-Ответ: список `EventFullDto`.
-
-Основной потребитель: `location-service`.
-
-### API request-service
-
-#### Получить число подтвержденных заявок
-
-```text
-POST /internal/requests/confirmed-counts
-```
-
-Тело запроса:
-
-```json
-{
-  "eventIds": [1, 2, 3]
-}
-```
-
-Ответ:
-
-```json
-[
-  {
-    "eventId": 1,
-    "count": 10
-  },
-  {
-    "eventId": 2,
-    "count": 5
-  }
-]
-```
-
-Основной потребитель: `event-service`.
-
-### API user-service
-
-#### Получить пользователя
-
-```text
-GET /internal/users/{userId}
-```
-
-Ответ: `UserShortDto`.
-
-```text
-id
-name
-```
-
-#### Получить пользователей списком
-
-```text
-GET /internal/users?ids={id1}&ids={id2}
-```
-
-Ответ: список `UserShortDto`.
-
-Основные потребители: `event-service`, `request-service`.
-
-### API stat-server
-
-Контракт находится в общем модуле `interaction-api` в интерфейсе `StatsApi`.
-
-#### Записать хит
-
-```text
-POST /hit
-```
-
-Тело содержит:
-
-```text
-app
-uri
-ip
-timestamp
-```
-
-Дата и время передаются в формате:
-
-```text
-yyyy-MM-dd HH:mm:ss
-```
-
-#### Получить статистику
-
-```text
-GET /stats
-```
-
-Параметры:
-
-```text
-start
-end
-uris
-unique
-```
-
-Ответ содержит:
-
-```text
-app
-uri
-hits
-```
-
-`event-service` использует `unique=true` для получения числа уникальных просмотров.
-
-## Отказоустойчивость внутренних вызовов
-
-Feign клиенты объявлены в:
-
-`core/interaction-api/src/main/java/ru/practicum/explorewithme/interaction/feign`
-
-Для клиентов используются fallback фабрики.
-
-Основные настройки находятся в центральных конфигурациях сервисов:
-
-```text
-resilience4j.retry
-resilience4j.circuitbreaker
-resilience4j.timelimiter
-```
-
-Текущие общие параметры:
-
-- до 3 попыток вызова;
-- начальная пауза между попытками 1 секунда;
-- exponential backoff с множителем 2;
-- окно circuit breaker 50 вызовов;
-- порог ошибок 50 процентов;
-- время open состояния 10 секунд;
-- до 5 пробных вызовов в half-open состоянии;
-- общий timeout timelimiter 5 секунд.
-
-Поведение fallback зависит от сервиса:
-
-- недоступность `stat-server` не отменяет основной пользовательский запрос, а просмотры считаются равными 0;
-- недоступность `request-service` при обогащении событий приводит к нулевому числу подтвержденных заявок;
-- недоступность `user-service` допускает выдачу заглушки для одного пользователя или пустого списка для батч запроса;
-- недоступность `event-service` при запросе из `request-service` приводит к `ServiceUnavailableException`, а поиск событий по радиусу для `location-service` возвращает пустой список.
-
-HTTP 404 от внутренних сервисов преобразуется Feign decoder в `NotFoundException` и обрабатывается отдельно от недоступности сервиса.
+Для проверки факта посещения event-service хранит уникальную пару `user_id` и `event_id` в таблице `event_views`.
 
 ## Конфигурация
 
-Архитектура конфигурации состоит из двух уровней.
+Локальные конфигурации core, infra и stat сервисов находятся в Config Server:
 
-### Локальная конфигурация запуска
+`infra/config-server/src/main/resources/config`
 
-Каждый сервис содержит локальный файл `application.yaml`, где задаются:
+Конфигурации рекомендательной системы:
 
-- имя приложения;
-- подключение к config-server;
-- включение поиска config-server через Eureka;
-- подключение к Eureka.
+- `config/stat/application.yaml` - общий конфиг, в том числе веса действий
+- `config/stat/collector/application.yaml`
+- `config/stat/aggregator/application.yaml`
+- `config/stat/analyzer/application.yaml`
 
-Примеры:
+Общие веса действий находятся только в `config/stat/application.yaml`. Сервисные конфиги Collector, Aggregator и Analyzer не дублируют эти значения.
 
-```text
-core/event-service/src/main/resources/application.yaml
-core/request-service/src/main/resources/application.yaml
-core/user-service/src/main/resources/application.yaml
-core/location-service/src/main/resources/application.yaml
-stat/stat-server/src/main/resources/application.yaml
-infra/gateway-server/src/main/resources/application.yml
-infra/discovery-server/src/main/resources/application.yml
-infra/config-server/src/main/resources/application.yml
-```
-
-### Центральная конфигурация
-
-Бизнес настройки сервисов хранятся в `config-server`.
-
-```text
-infra/config-server/src/main/resources/config/core/event-service/application.yaml
-infra/config-server/src/main/resources/config/core/request-service/application.yaml
-infra/config-server/src/main/resources/config/core/user-service/application.yaml
-infra/config-server/src/main/resources/config/core/location-service/application.yaml
-infra/config-server/src/main/resources/config/stat/stat-server/application.yaml
-infra/config-server/src/main/resources/config/infra/gateway-server/application.yaml
-```
-
-В этих файлах находятся:
-
-- порты;
-- параметры PostgreSQL;
-- настройки JPA;
-- настройки OpenFeign;
-- timeout;
-- retry;
-- circuit breaker;
-- timelimiter;
-- маршруты gateway.
-
-В текущей конфигурации порты бизнес сервисов заданы как `0`, поэтому Spring выбирает свободный порт. Доступ к ним выполняется через Eureka по имени сервиса.
-
-### Базы данных
-
-Core сервисы используют PostgreSQL базу `ewm_main_db`.
-
-Логическое разделение данных реализовано по таблицам:
-
-- `event-service` - `categories`, `events`, `compilations`, `compilation_events`;
-- `request-service` - `participation_requests`;
-- `user-service` - `users`;
-- `location-service` - `admin_locations`.
-
-`stat-server` использует отдельную PostgreSQL базу `ewm_stats_db` и таблицу `hits`.
-
-SQL схемы находятся рядом с исходным кодом соответствующих сервисов:
-
-```text
-core/event-service/src/main/resources/schema.sql
-core/request-service/src/main/resources/schema.sql
-core/user-service/src/main/resources/schema.sql
-core/location-service/src/main/resources/schema.sql
-stat/stat-server/src/main/resources/schema.sql
-```
+Порты HTTP и gRPC у Collector и Analyzer выбираются случайно через значение `0`.
 
 ## Внешний API
 
-Основная спецификация внешнего API проекта:
+Спецификация внешнего API:
 
-[ewm-main-service-spec.json](https://github.com/dimitrievdmit/java-explore-with-me-plus/blob/main/ewm-main-service-spec.json)
+https://github.com/dimitrievdmit/java-explore-with-me-plus/blob/main/ewm-main-service-spec.json
 
-Спецификация API сервиса статистики находится в проекте:
+Локальная копия спецификации находится в `ewm-main-service-spec.json`.
 
-`ewm-stats-service-spec.json`
+## Сборка
 
-## Структура проекта
+Требования к окружению:
 
-```text
-.
-|-- pom.xml
-|-- ewm-main-service-spec.json
-|-- ewm-stats-service-spec.json
-|
-|-- core
-|   |-- pom.xml
-|   |-- event-service
-|   |-- request-service
-|   |-- user-service
-|   |-- location-service
-|   `-- interaction-api
-|
-|-- infra
-|   |-- pom.xml
-|   |-- config-server
-|   |-- discovery-server
-|   `-- gateway-server
-|
-`-- stat
-    |-- pom.xml
-    `-- stat-server
+- Java 21
+- Maven 3.9+
+- Docker и Docker Compose
+- PostgreSQL
+
+Сборка всего проекта:
+
+```bash
+mvn clean package
 ```
 
-Для исходного кода бизнес сервисов используется обычное разделение на controller, service, repository, model, dto и mapper.
+Полный сценарий локального запуска требует сначала поднять инфраструктуру и Kafka, затем Config Server и Discovery Server, после чего core и stat сервисы.
 
-В модуле `interaction-api` дополнительно сосредоточены общие контракты и механизмы межсервисного взаимодействия.

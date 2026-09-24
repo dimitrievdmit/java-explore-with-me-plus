@@ -32,10 +32,7 @@ import ru.practicum.explorewithme.interaction.grpc.CollectorGrpcClient;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -227,10 +224,28 @@ public class EventServiceImpl implements EventService {
     @Override
     public List<EventShortDto> getEventsPublic(EventSearchParams params) {
         BooleanExpression predicate = EventPredicate.build(params);
-        Pageable pageable = PageRequest.of(params.getFrom() / params.getSize(), params.getSize(), getSort(params.getSort()));
-        Page<Event> page = eventRepository.findAll(predicate, pageable);
+        Sort sort = getSort(params.getSort());
+        List<Event> events;
+        Sort.Order ratingOrder = sort.getOrderFor("rating");
 
-        List<Event> events = page.getContent();
+        if (ratingOrder != null) {
+            events = eventRepository.findAll(predicate);
+            Map<Long, Double> ratings = getRatingsMap(events);
+            Comparator<Event> comparator = Comparator.comparingDouble(
+                    (Event event) -> ratings.getOrDefault(event.getId(), 0.0));
+            if (ratingOrder.isDescending()) {
+                comparator = comparator.reversed();
+            }
+            events.sort(comparator.thenComparing(Event::getEventDate).thenComparing(Event::getId));
+
+            int from = Math.min(params.getFrom(), events.size());
+            int to = Math.min(from + params.getSize(), events.size());
+            events = events.subList(from, to);
+        } else {
+            Pageable pageable = PageRequest.of(params.getFrom() / params.getSize(), params.getSize(), sort);
+            events = eventRepository.findAll(predicate, pageable).getContent();
+        }
+
         Map<Long, Long> confirmedRequests = getConfirmedRequestsMap(events);
         Map<Long, UserShortDto> initiators = getInitiatorsMap(events);
         Map<Long, Double> ratings = getRatingsMap(events);
@@ -244,7 +259,9 @@ public class EventServiceImpl implements EventService {
     }
 
     private Sort getSort(String sort) {
-        // ToDo добавить сортировку по рейтингу вместо удалённых views.
+        if ("rating".equalsIgnoreCase(sort)) {
+            return Sort.by(Sort.Direction.DESC, "rating");
+        }
         return Sort.by(Sort.Direction.ASC, "eventDate");
     }
 
@@ -325,11 +342,18 @@ public class EventServiceImpl implements EventService {
                 .toList();
     }
 
+    private Map<Long, Double> getRatingsMapByIds(List<Long> ids) {
+        if (ids.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return analyzerGrpcClient.getInteractionsCount(ids);
+    }
+
     private Map<Long, Double> getRatingsMap(List<Event> events) {
         if (events.isEmpty()) {
             return Collections.emptyMap();
         }
-        return analyzerGrpcClient.getInteractionsCount(events.stream().map(Event::getId).toList());
+        return getRatingsMapByIds(events.stream().map(Event::getId).toList());
     }
 
     private Map<Long, Long> getConfirmedRequestsMap(List<Event> events) {
