@@ -8,7 +8,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-//ToDo добавить создание таблицы event_views в schema.sql
+
 @Entity
 @Table(name = "event_views", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "event_id"}))
 @NoArgsConstructor

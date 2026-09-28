@@ -23,10 +23,14 @@ kafka:
   topics:
     user-actions: stats.user-actions.v1
     events-similarity: stats.events-similarity.v1
+    event-ratings: stats.event-ratings.v1
   consumer:
     actions-group-id: analyzer-user-actions
     similarity-group-id: analyzer-events-similarity
     auto-offset-reset: earliest
+  producer:
+    acks: all
+    enable-idempotence: true
 
 grpc:
   server:

@@ -19,4 +19,10 @@ protocol StatsProtocol {
         double score;
         @logicalType("timestamp-millis") long timestamp;
     }
+
+    record EventRatingAvro {
+        long eventId;
+        double rating;
+        @logicalType("timestamp-millis") long timestamp;
+    }
 }

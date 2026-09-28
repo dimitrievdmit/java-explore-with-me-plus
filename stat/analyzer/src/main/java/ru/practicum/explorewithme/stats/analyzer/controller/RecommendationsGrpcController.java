@@ -6,11 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.beans.factory.annotation.Value;
-import ru.practicum.ewm.stats.proto.dashboard.InteractionsCountRequestProto;
-import ru.practicum.ewm.stats.proto.dashboard.RecommendationsControllerGrpc;
-import ru.practicum.ewm.stats.proto.dashboard.RecommendedEventProto;
-import ru.practicum.ewm.stats.proto.dashboard.SimilarEventsRequestProto;
-import ru.practicum.ewm.stats.proto.dashboard.UserPredictionsRequestProto;
+import ru.practicum.ewm.stats.proto.dashboard.*;
 import ru.practicum.explorewithme.stats.analyzer.service.AnalyzerService;
 
 import java.util.List;
@@ -54,7 +50,7 @@ public class RecommendationsGrpcController
 
     @Override
     public void getInteractionsCount(InteractionsCountRequestProto request,
-                                      StreamObserver<RecommendedEventProto> responseObserver) {
+                                     StreamObserver<RecommendedEventProto> responseObserver) {
         try {
             analyzerService.getInteractionsCount(request.getEventIdList())
                     .forEach((eventId, score) -> responseObserver.onNext(RecommendedEventProto.newBuilder()

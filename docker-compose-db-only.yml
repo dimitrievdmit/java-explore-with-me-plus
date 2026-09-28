@@ -72,4 +72,6 @@ services:
       --topic stats.user-actions.v1 --partitions 3 --replication-factor 1
       && kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists
       --topic stats.events-similarity.v1 --partitions 3 --replication-factor 1
+      && kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists
+      --topic stats.event-ratings.v1 --partitions 3 --replication-factor 1
     init: true

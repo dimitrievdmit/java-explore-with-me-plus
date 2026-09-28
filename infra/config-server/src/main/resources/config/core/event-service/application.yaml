@@ -72,3 +72,11 @@ grpc:
       enableKeepAlive: true
       keepAliveWithoutCalls: true
       negotiationType: plaintext
+kafka:
+  bootstrap-servers: localhost:9092
+  topics:
+    event-ratings: stats.event-ratings.v1
+  consumer:
+    group-id: event-service-ratings
+    auto-offset-reset: earliest
+

@@ -58,6 +58,9 @@ public class Event {
     @Column(nullable = false, length = 120)
     String title;
 
+    @Column(nullable = false)
+    Double rating = 0.0;
+
     @Column(name = "published_on")
     LocalDateTime publishedOn;
 }

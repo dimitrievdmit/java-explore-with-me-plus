@@ -3,17 +3,9 @@ package ru.practicum.explorewithme.interaction.grpc;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-import ru.practicum.ewm.stats.proto.dashboard.InteractionsCountRequestProto;
-import ru.practicum.ewm.stats.proto.dashboard.RecommendationsControllerGrpc;
-import ru.practicum.ewm.stats.proto.dashboard.RecommendedEventProto;
-import ru.practicum.ewm.stats.proto.dashboard.SimilarEventsRequestProto;
-import ru.practicum.ewm.stats.proto.dashboard.UserPredictionsRequestProto;
+import ru.practicum.ewm.stats.proto.dashboard.*;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Spliterator;
-import java.util.Spliterators;
+import java.util.*;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
