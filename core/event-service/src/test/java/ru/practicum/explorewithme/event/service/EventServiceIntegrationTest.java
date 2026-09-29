@@ -14,9 +14,12 @@ import ru.practicum.explorewithme.event.enums.UserEventStateAction;
 import ru.practicum.explorewithme.interaction.dto.*;
 import ru.practicum.explorewithme.interaction.feign.RequestClient;
 import ru.practicum.explorewithme.interaction.feign.UserClient;
+import ru.practicum.explorewithme.interaction.grpc.AnalyzerGrpcClient;
+import ru.practicum.explorewithme.interaction.grpc.CollectorGrpcClient;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,6 +37,10 @@ class EventServiceIntegrationTest {
     private UserClient userClient;
     @MockBean
     private RequestClient requestClient;
+    @MockBean
+    private AnalyzerGrpcClient analyzerGrpcClient;
+    @MockBean
+    private CollectorGrpcClient collectorGrpcClient;
     @Autowired
     private CategoryService categoryService;
 
@@ -52,6 +59,7 @@ class EventServiceIntegrationTest {
                 new UserShortDto(inv.getArgument(0), "User " + inv.getArgument(0)));
         when(userClient.getUsersShort(anyList())).thenReturn(
                 List.of(new UserShortDto(USER1_ID, "User 1"), new UserShortDto(USER2_ID, "User 2")));
+        when(analyzerGrpcClient.getInteractionsCount(anyList())).thenReturn(Collections.emptyMap());
     }
 
     @Test

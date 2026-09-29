@@ -4,13 +4,17 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
+import ru.practicum.ewm.stats.proto.collector.ActionTypeProto;
+import ru.practicum.ewm.stats.proto.dashboard.RecommendedEventProto;
 import ru.practicum.explorewithme.category.dal.CategoryRepository;
 import ru.practicum.explorewithme.category.model.Category;
 import ru.practicum.explorewithme.event.dal.EventRepository;
+import ru.practicum.explorewithme.event.dal.EventViewRepository;
 import ru.practicum.explorewithme.event.dto.EventSearchParams;
 import ru.practicum.explorewithme.event.dto.NewEventDto;
 import ru.practicum.explorewithme.event.dto.UpdateEventUserRequest;
@@ -23,12 +27,14 @@ import ru.practicum.explorewithme.interaction.exception.BadRequestException;
 import ru.practicum.explorewithme.interaction.exception.ConflictException;
 import ru.practicum.explorewithme.interaction.exception.NotFoundException;
 import ru.practicum.explorewithme.interaction.feign.RequestClient;
-import ru.practicum.explorewithme.interaction.feign.StatsClient;
 import ru.practicum.explorewithme.interaction.feign.UserClient;
+import ru.practicum.explorewithme.interaction.grpc.AnalyzerGrpcClient;
+import ru.practicum.explorewithme.interaction.grpc.CollectorGrpcClient;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -49,7 +55,11 @@ class EventServiceImplTest {
     @Mock
     private RequestClient requestClient;
     @Mock
-    private StatsClient statsClient;
+    private AnalyzerGrpcClient analyzerGrpcClient;
+    @Mock
+    private CollectorGrpcClient collectorGrpcClient;
+    @Mock
+    private EventViewRepository eventViewRepository;
 
     @InjectMocks
     private EventServiceImpl eventService;
@@ -191,20 +201,26 @@ class EventServiceImplTest {
 
     @Test
     void shouldReturnEvents() {
-        EventSearchParams params = EventSearchParams.builder().from(0).size(10).sort("VIEWS").build();
+        EventSearchParams params = EventSearchParams.builder().from(0).size(10).sort("rating").build();
 
         Event event = createEventWithDefaults();
         event.setState(EventState.PUBLISHED);
         Page<Event> page = new PageImpl<>(List.of(event));
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
 
-        when(eventRepository.findAll(any(BooleanExpression.class), any(Pageable.class))).thenReturn(page);
+        when(eventRepository.findAll(any(BooleanExpression.class), pageableCaptor.capture())).thenReturn(page);
         when(requestClient.getConfirmedRequestsCounts(any(EventIdListDto.class))).thenReturn(Collections.emptyList());
         when(userClient.getUsersShort(anyList())).thenReturn(List.of(userShortDto));
+        when(analyzerGrpcClient.getInteractionsCount(anyList())).thenReturn(Map.of(event.getId(), 7.5));
 
         List<EventShortDto> result = eventService.getEventsPublic(params);
 
         assertFalse(result.isEmpty());
         assertEquals(event.getTitle(), result.get(0).getTitle());
+        assertThat(pageableCaptor.getValue().getSort().getOrderFor("rating")).isNotNull();
+        assertThat(pageableCaptor.getValue().getSort().getOrderFor("rating").getDirection())
+                .isEqualTo(Sort.Direction.DESC);
+        assertThat(result.get(0).getRating()).isEqualTo(7.5);
     }
 
     @Test
@@ -213,7 +229,6 @@ class EventServiceImplTest {
         event.setState(EventState.PUBLISHED);
 
         when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
-        when(statsClient.getStats(any(), any(), any(), any())).thenReturn(List.of());
         when(requestClient.getConfirmedRequestsCounts(any(EventIdListDto.class))).thenReturn(Collections.emptyList());
         when(userClient.getUserShort(USER_ID)).thenReturn(userShortDto);
 
@@ -232,7 +247,6 @@ class EventServiceImplTest {
         when(eventRepository.findEventsByRadius(eq(55.75f), eq(37.62f), eq(50f), any(Pageable.class))).thenReturn(page);
         when(requestClient.getConfirmedRequestsCounts(any(EventIdListDto.class))).thenReturn(Collections.emptyList());
         when(userClient.getUsersShort(anyList())).thenReturn(List.of(userShortDto));
-        when(statsClient.getStats(any(), any(), any(), any())).thenReturn(List.of());
 
         List<EventFullDto> result = eventService.searchEventsByRadius(55.75f, 37.62f, 50f, 0, 10);
 
@@ -248,6 +262,78 @@ class EventServiceImplTest {
         List<EventFullDto> result = eventService.searchEventsByRadius(-90f, 0f, 1f, 0, 10);
 
         assertThat(result).isEmpty();
-        verify(statsClient, never()).getStats(any(), any(), any(), any());
+        verify(analyzerGrpcClient, never()).getInteractionsCount(anyList());
     }
+
+    @Test
+    void registerView_ShouldSendActionAndSaveFirstViewOnly() {
+        Event publishedEvent = createEventWithDefaults();
+        publishedEvent.setState(EventState.PUBLISHED);
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(publishedEvent));
+        when(eventViewRepository.existsByUserIdAndEventId(USER_ID, 1L)).thenReturn(false);
+
+        eventService.registerView(USER_ID, 1L);
+
+        verify(collectorGrpcClient).collectUserAction(eq(USER_ID), eq(1L),
+                eq(ActionTypeProto.ACTION_VIEW), any());
+        verify(eventViewRepository).save(any());
+    }
+
+    @Test
+    void registerView_ShouldNotDuplicateExistingView() {
+        Event publishedEvent = createEventWithDefaults();
+        publishedEvent.setState(EventState.PUBLISHED);
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(publishedEvent));
+        when(eventViewRepository.existsByUserIdAndEventId(USER_ID, 1L)).thenReturn(true);
+
+        eventService.registerView(USER_ID, 1L);
+
+        verify(collectorGrpcClient).collectUserAction(eq(USER_ID), eq(1L),
+                eq(ActionTypeProto.ACTION_VIEW), any());
+        verify(eventViewRepository, never()).save(any());
+    }
+
+    @Test
+    void likeEvent_WithoutView_ShouldThrowBadRequest() {
+        when(eventViewRepository.existsByUserIdAndEventId(USER_ID, 1L)).thenReturn(false);
+
+        assertThatThrownBy(() -> eventService.likeEvent(USER_ID, 1L))
+                .isInstanceOf(BadRequestException.class);
+        verify(collectorGrpcClient, never()).collectUserAction(anyLong(), anyLong(), any(), any());
+    }
+
+    @Test
+    void likeEvent_AfterView_ShouldSendAction() {
+        when(eventViewRepository.existsByUserIdAndEventId(USER_ID, 1L)).thenReturn(true);
+
+        eventService.likeEvent(USER_ID, 1L);
+
+        verify(collectorGrpcClient).collectUserAction(eq(USER_ID), eq(1L),
+                eq(ActionTypeProto.ACTION_LIKE), any());
+    }
+
+    @Test
+    void getRecommendationsForUser_ShouldReturnPublishedEventsInAnalyzerOrder() {
+        RecommendedEventProto first = RecommendedEventProto.newBuilder().setEventId(1L).setScore(0.9).build();
+        RecommendedEventProto second = RecommendedEventProto.newBuilder().setEventId(2L).setScore(0.8).build();
+        Event published = createEventWithDefaults();
+        published.setId(1L);
+        published.setState(EventState.PUBLISHED);
+        Event unpublished = createEventWithDefaults();
+        unpublished.setId(2L);
+        unpublished.setState(EventState.PENDING);
+
+        when(analyzerGrpcClient.getRecommendationsForUser(USER_ID, 10))
+                .thenReturn(java.util.stream.Stream.of(first, second));
+        when(eventRepository.findAllById(List.of(1L, 2L))).thenReturn(List.of(published, unpublished));
+        when(requestClient.getConfirmedRequestsCounts(any(EventIdListDto.class))).thenReturn(Collections.emptyList());
+        when(userClient.getUsersShort(anyList())).thenReturn(List.of(userShortDto));
+        when(analyzerGrpcClient.getInteractionsCount(anyList())).thenReturn(Map.of(1L, 5.0));
+
+        List<EventShortDto> result = eventService.getRecommendationsForUser(USER_ID, 10);
+
+        assertThat(result).extracting(EventShortDto::getId).containsExactly(1L);
+        assertThat(result.getFirst().getRating()).isEqualTo(5.0);
+    }
+
 }

@@ -15,8 +15,9 @@ import ru.practicum.explorewithme.interaction.dto.EventIdListDto;
 import ru.practicum.explorewithme.interaction.dto.GeoPointDto;
 import ru.practicum.explorewithme.interaction.dto.UserShortDto;
 import ru.practicum.explorewithme.interaction.feign.RequestClient;
-import ru.practicum.explorewithme.interaction.feign.StatsClient;
 import ru.practicum.explorewithme.interaction.feign.UserClient;
+import ru.practicum.explorewithme.interaction.grpc.AnalyzerGrpcClient;
+import ru.practicum.explorewithme.interaction.grpc.CollectorGrpcClient;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -41,7 +42,9 @@ class EventRadiusIntegrationTest {
     @MockBean
     private RequestClient requestClient;
     @MockBean
-    private StatsClient statsClient;
+    private AnalyzerGrpcClient analyzerGrpcClient;
+    @MockBean
+    private CollectorGrpcClient collectorGrpcClient;
 
     private final DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final Long USER_ID = 1L;
@@ -51,6 +54,7 @@ class EventRadiusIntegrationTest {
         when(userClient.getUserShort(anyLong())).thenReturn(new UserShortDto(USER_ID, "User"));
         when(userClient.getUsersShort(anyList())).thenReturn(List.of(new UserShortDto(USER_ID, "User")));
         when(requestClient.getConfirmedRequestsCounts(any(EventIdListDto.class))).thenReturn(Collections.emptyList());
+        when(analyzerGrpcClient.getInteractionsCount(anyList())).thenReturn(Collections.emptyMap());
 
         Category category = categoryRepository.save(new Category(null, "RadiusTest"));
 

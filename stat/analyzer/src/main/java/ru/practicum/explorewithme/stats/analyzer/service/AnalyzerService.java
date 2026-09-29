@@ -6,11 +6,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.stats.avro.EventSimilarityAvro;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
+import ru.practicum.explorewithme.stats.analyzer.dto.EventRatingChangedDto;
+import ru.practicum.explorewithme.stats.analyzer.dto.RecommendationDto;
 import ru.practicum.explorewithme.stats.analyzer.model.EventSimilarity;
 import ru.practicum.explorewithme.stats.analyzer.model.EventSimilarityId;
 import ru.practicum.explorewithme.stats.analyzer.model.UserEventInteraction;
 import ru.practicum.explorewithme.stats.analyzer.model.UserEventInteractionId;
 import ru.practicum.explorewithme.stats.analyzer.repository.EventSimilarityRepository;
+import ru.practicum.explorewithme.stats.analyzer.repository.EventWeightProjection;
 import ru.practicum.explorewithme.stats.analyzer.repository.UserEventInteractionRepository;
 import ru.practicum.explorewithme.stats.common.service.ActionWeightResolver;
 
@@ -38,7 +41,7 @@ public class AnalyzerService {
         interactionRepository.save(interaction);
 
         Double rating = interactionRepository.sumWeightsByEventId(action.getEventId());
-        eventPublisher.publishEvent(new EventRatingChanged(
+        eventPublisher.publishEvent(new EventRatingChangedDto(
                 action.getEventId(),
                 rating == null ? 0.0 : rating,
                 action.getTimestamp()));
@@ -64,18 +67,18 @@ public class AnalyzerService {
     }
 
     @Transactional(readOnly = true)
-    public List<Recommendation> getSimilarEvents(long eventId, long userId, int maxResults) {
+    public List<RecommendationDto> getSimilarEvents(long eventId, long userId, int maxResults) {
         if (maxResults <= 0) {
             return List.of();
         }
         Set<Long> interacted = getInteractedEventIds(userId);
         return similarityRepository.findAllByEventAOrEventB(eventId, eventId).stream()
-                .map(similarity -> new Recommendation(
+                .map(similarity -> new RecommendationDto(
                         similarity.getEventA().equals(eventId) ? similarity.getEventB() : similarity.getEventA(),
                         similarity.getScore()))
                 .filter(item -> !interacted.contains(item.eventId()))
-                .sorted(Comparator.comparingDouble(Recommendation::score).reversed()
-                        .thenComparingLong(Recommendation::eventId))
+                .sorted(Comparator.comparingDouble(RecommendationDto::score).reversed()
+                        .thenComparingLong(RecommendationDto::eventId))
                 .limit(maxResults)
                 .toList();
     }
@@ -87,33 +90,44 @@ public class AnalyzerService {
     }
 
     @Transactional(readOnly = true)
-    public List<Recommendation> getRecommendationsForUser(long userId, int maxResults,
-                                                          int recentLimit, int neighborCount) {
+    public List<RecommendationDto> getRecommendationsForUser(long userId, int maxResults,
+                                                             int recentLimit, int neighborCount) {
         if (maxResults <= 0) {
             return List.of();
         }
 
-        List<UserEventInteraction> allInteractions = interactionRepository.findAllByUserId(userId);
-        if (allInteractions.isEmpty()) {
+        List<UserEventInteraction> interactions = interactionRepository.findAllByUserId(userId);
+        if (interactions.isEmpty()) {
             return List.of();
         }
 
-        List<UserEventInteraction> recentInteractions = findRecentInteractions(allInteractions, recentLimit);
-        Set<Long> interactedIds = collectInteractedIds(allInteractions);
+        return calculateUserRecommendations(interactions, maxResults, recentLimit, neighborCount);
+    }
+
+    private List<RecommendationDto> calculateUserRecommendations(List<UserEventInteraction> interactions,
+                                                                 int maxResults, int recentLimit,
+                                                                 int neighborCount) {
+        List<UserEventInteraction> recentInteractions = findRecentInteractions(interactions, recentLimit);
+        Set<Long> interactedIds = collectInteractedIds(interactions);
         Set<Long> seedIds = collectEventIds(recentInteractions);
         Map<Long, Double> candidateSimilarity = findCandidateSimilarity(seedIds, interactedIds);
         if (candidateSimilarity.isEmpty()) {
             return List.of();
         }
 
-        Map<Long, Map<Long, Double>> similaritiesByCandidate = findSimilaritiesByCandidate(candidateSimilarity.keySet());
-        Map<Long, Double> userWeights = buildUserWeights(allInteractions);
-        List<Recommendation> recommendations = buildRecommendations(
-                candidateSimilarity.keySet(), similaritiesByCandidate, userWeights, neighborCount);
+        Map<Long, Map<Long, Double>> similaritiesByCandidate =
+                findSimilaritiesByCandidate(candidateSimilarity.keySet());
+        Map<Long, Double> userWeights = buildUserWeights(interactions);
+        return sortAndLimitRecommendations(
+                buildRecommendations(candidateSimilarity.keySet(), similaritiesByCandidate, userWeights, neighborCount),
+                maxResults);
+    }
 
+    private List<RecommendationDto> sortAndLimitRecommendations(
+            List<RecommendationDto> recommendations, int maxResults) {
         return recommendations.stream()
-                .sorted(Comparator.comparingDouble(Recommendation::score).reversed()
-                        .thenComparingLong(Recommendation::eventId))
+                .sorted(Comparator.comparingDouble(RecommendationDto::score).reversed()
+                        .thenComparingLong(RecommendationDto::eventId))
                 .limit(maxResults)
                 .toList();
     }
@@ -180,15 +194,14 @@ public class AnalyzerService {
                         LinkedHashMap::new));
     }
 
-    private List<Recommendation> buildRecommendations(Set<Long> candidateIds,
-                                                      Map<Long, Map<Long, Double>> similaritiesByCandidate,
-                                                      Map<Long, Double> userWeights,
-                                                      int neighborCount) {
-        List<Recommendation> recommendations = new ArrayList<>();
+    private List<RecommendationDto> buildRecommendations(Set<Long> candidateIds,
+                                                         Map<Long, Map<Long, Double>> similaritiesByCandidate,
+                                                         Map<Long, Double> userWeights, int neighborCount) {
+        List<RecommendationDto> recommendations = new ArrayList<>();
         for (Long candidateId : candidateIds) {
             List<Map.Entry<Long, Double>> topNeighbors = getTopNeighbors(
                     similaritiesByCandidate.getOrDefault(candidateId, Map.of()), userWeights, neighborCount);
-            Recommendation recommendation = calculateRecommendation(candidateId, topNeighbors, userWeights);
+            RecommendationDto recommendation = calculateRecommendation(candidateId, topNeighbors, userWeights);
             if (recommendation != null) {
                 recommendations.add(recommendation);
             }
@@ -197,8 +210,7 @@ public class AnalyzerService {
     }
 
     private List<Map.Entry<Long, Double>> getTopNeighbors(Map<Long, Double> neighbors,
-                                                          Map<Long, Double> userWeights,
-                                                          int neighborCount) {
+                                                          Map<Long, Double> userWeights, int neighborCount) {
         return neighbors.entrySet().stream()
                 .filter(entry -> userWeights.containsKey(entry.getKey()))
                 .sorted(Map.Entry.<Long, Double>comparingByValue().reversed()
@@ -207,9 +219,9 @@ public class AnalyzerService {
                 .toList();
     }
 
-    private Recommendation calculateRecommendation(long candidateId,
-                                                   List<Map.Entry<Long, Double>> neighbors,
-                                                   Map<Long, Double> userWeights) {
+    private RecommendationDto calculateRecommendation(long candidateId,
+                                                      List<Map.Entry<Long, Double>> neighbors,
+                                                      Map<Long, Double> userWeights) {
         double weightedSum = 0.0;
         double similaritySum = 0.0;
         for (Map.Entry<Long, Double> neighbor : neighbors) {
@@ -219,7 +231,7 @@ public class AnalyzerService {
         if (similaritySum <= 0.0) {
             return null;
         }
-        return new Recommendation(candidateId, weightedSum / similaritySum);
+        return new RecommendationDto(candidateId, weightedSum / similaritySum);
     }
 
     @Transactional(readOnly = true)
@@ -229,8 +241,7 @@ public class AnalyzerService {
         }
         Map<Long, Double> result = new LinkedHashMap<>();
         eventIds.forEach(id -> result.put(id, 0.0));
-        for (UserEventInteractionRepository.EventWeightProjection projection
-                : interactionRepository.sumWeightsByEventIds(eventIds)) {
+        for (EventWeightProjection projection : interactionRepository.sumWeightsByEventIds(eventIds)) {
             result.put(projection.getEventId(), projection.getScore());
         }
         return result;
@@ -244,11 +255,5 @@ public class AnalyzerService {
             return similarity.getEventA();
         }
         return null;
-    }
-
-    public record Recommendation(long eventId, double score) {
-    }
-
-    public record EventRatingChanged(long eventId, double rating, java.time.Instant timestamp) {
     }
 }

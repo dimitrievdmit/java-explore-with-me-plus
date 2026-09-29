@@ -7,6 +7,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import ru.practicum.explorewithme.category.model.Category;
 import ru.practicum.explorewithme.event.model.Event;
 import ru.practicum.explorewithme.event.model.GeoPoint;
@@ -74,6 +75,27 @@ class EventRepositoryTest {
 
         assertThat(page.getContent()).extracting(Event::getTitle).containsExactly("Inside");
     }
+
+    @Test
+    void findAll_SortsByRatingWithDatabasePagination() {
+        Event first = createEvent("Low rating", 55f, 37f);
+        first.setRating(1.0);
+        Event second = createEvent("High rating", 55f, 37f);
+        second.setRating(10.0);
+        em.flush();
+        em.clear();
+
+        Pageable pageable = PageRequest.of(0, 1,
+                Sort.by(Sort.Direction.DESC, "rating")
+                        .and(Sort.by(Sort.Direction.ASC, "eventDate"))
+                        .and(Sort.by(Sort.Direction.ASC, "id")));
+        var page = eventRepository.findAll(pageable);
+
+        assertThat(page.getContent()).hasSize(1);
+        assertThat(page.getContent().getFirst().getTitle()).isEqualTo("High rating");
+        assertThat(page.getTotalElements()).isEqualTo(2);
+    }
+
 
     private Event createEvent(String title, Float lat, Float lon) {
         Event e = new Event();

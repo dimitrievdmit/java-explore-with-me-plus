@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.beans.factory.annotation.Value;
 import ru.practicum.ewm.stats.proto.dashboard.*;
+import ru.practicum.explorewithme.stats.analyzer.dto.RecommendationDto;
 import ru.practicum.explorewithme.stats.analyzer.service.AnalyzerService;
 
 import java.util.List;
@@ -25,7 +26,7 @@ public class RecommendationsGrpcController
     public void getRecommendationsForUser(UserPredictionsRequestProto request,
                                           StreamObserver<RecommendedEventProto> responseObserver) {
         try {
-            List<AnalyzerService.Recommendation> recommendations = analyzerService.getRecommendationsForUser(
+            List<RecommendationDto> recommendations = analyzerService.getRecommendationsForUser(
                     request.getUserId(),
                     request.getMaxResults(),
                     request.getMaxResults(),
@@ -63,7 +64,7 @@ public class RecommendationsGrpcController
         }
     }
 
-    private void send(List<AnalyzerService.Recommendation> recommendations,
+    private void send(List<RecommendationDto> recommendations,
                       StreamObserver<RecommendedEventProto> responseObserver) {
         recommendations.forEach(recommendation -> responseObserver.onNext(RecommendedEventProto.newBuilder()
                 .setEventId(recommendation.eventId())

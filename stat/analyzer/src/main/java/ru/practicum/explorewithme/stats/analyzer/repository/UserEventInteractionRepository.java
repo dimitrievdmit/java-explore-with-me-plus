@@ -18,10 +18,4 @@ public interface UserEventInteractionRepository extends JpaRepository<UserEventI
     @Query("SELECT i.eventId AS eventId, SUM(i.weight) AS score " +
             "FROM UserEventInteraction i WHERE i.eventId IN :eventIds GROUP BY i.eventId")
     List<EventWeightProjection> sumWeightsByEventIds(@Param("eventIds") List<Long> eventIds);
-
-    interface EventWeightProjection {
-        Long getEventId();
-
-        Double getScore();
-    }
 }

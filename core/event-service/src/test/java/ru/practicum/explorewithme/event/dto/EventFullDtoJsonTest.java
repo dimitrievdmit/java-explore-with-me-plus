@@ -41,7 +41,7 @@ class EventFullDtoJsonTest {
         assertThat(json).hasJsonPathNumberValue("$.id");
         assertThat(json).hasJsonPathStringValue("$.annotation");
         assertThat(json).hasJsonPathStringValue("$.eventDate");
-        assertThat(json).extractingJsonPathNumberValue("$.views").isEqualTo(15);
+        assertThat(json).extractingJsonPathNumberValue("$.rating").isEqualTo(15.0);
     }
 
     @Test
@@ -62,10 +62,11 @@ class EventFullDtoJsonTest {
                 + "    \"requestModeration\": true,\n"
                 + "    \"state\": \"PUBLISHED\",\n"
                 + "    \"title\": \"Test title\",\n"
-                + "    \"views\": 15\n"
+                + "    \"rating\": 15\n"
                 + "}";
         var dto = jacksonTester.parse(content).getObject();
         assertThat(dto.getId()).isEqualTo(1L);
         assertThat(dto.getState()).isEqualTo(EventState.PUBLISHED);
+        assertThat(dto.getRating()).isEqualTo(15.0);
     }
 }

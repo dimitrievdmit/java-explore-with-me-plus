@@ -23,8 +23,8 @@ import ru.practicum.explorewithme.interaction.dto.EventState;
 import ru.practicum.explorewithme.interaction.dto.UserShortDto;
 import ru.practicum.explorewithme.interaction.exception.ConflictException;
 import ru.practicum.explorewithme.interaction.feign.RequestClient;
-import ru.practicum.explorewithme.interaction.feign.StatsClient;
 import ru.practicum.explorewithme.interaction.feign.UserClient;
+import ru.practicum.explorewithme.interaction.grpc.AnalyzerGrpcClient;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -50,7 +50,7 @@ class EventServiceImplAdminTest {
     @Mock
     private RequestClient requestClient;
     @Mock
-    private StatsClient statsClient;
+    private AnalyzerGrpcClient analyzerGrpcClient;
 
     @InjectMocks
     private EventServiceImpl eventService;

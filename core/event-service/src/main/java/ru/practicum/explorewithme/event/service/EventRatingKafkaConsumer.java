@@ -6,6 +6,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.errors.WakeupException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
 import ru.practicum.ewm.stats.avro.EventRatingAvro;
@@ -16,6 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @Component
+@ConditionalOnProperty(prefix = "kafka.consumer", name = "enabled", matchIfMissing = true)
 @RequiredArgsConstructor
 @Slf4j
 public class EventRatingKafkaConsumer implements SmartLifecycle {

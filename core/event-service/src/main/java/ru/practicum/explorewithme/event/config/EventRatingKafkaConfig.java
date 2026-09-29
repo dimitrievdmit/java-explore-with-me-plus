@@ -4,6 +4,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import ru.practicum.ewm.stats.avro.EventRatingAvro;
@@ -12,6 +13,7 @@ import ru.practicum.ewm.stats.avro.serialization.EventRatingDeserializer;
 import java.util.Properties;
 
 @Configuration
+@ConditionalOnProperty(prefix = "kafka.consumer", name = "enabled", matchIfMissing = true)
 public class EventRatingKafkaConfig {
     @Value("${kafka.bootstrap-servers}")
     private String bootstrapServers;

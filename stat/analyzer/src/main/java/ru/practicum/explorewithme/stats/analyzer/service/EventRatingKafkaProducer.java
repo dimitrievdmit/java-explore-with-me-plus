@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import ru.practicum.ewm.stats.avro.EventRatingAvro;
+import ru.practicum.explorewithme.stats.analyzer.dto.EventRatingChangedDto;
 
 @Component
 @RequiredArgsConstructor
@@ -20,7 +21,7 @@ public class EventRatingKafkaProducer {
     private String topic;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void publish(AnalyzerService.EventRatingChanged event) {
+    public void publish(EventRatingChangedDto event) {
         EventRatingAvro rating = new EventRatingAvro(
                 event.eventId(),
                 event.rating(),

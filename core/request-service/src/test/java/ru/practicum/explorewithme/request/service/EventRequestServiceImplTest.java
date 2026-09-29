@@ -6,12 +6,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import ru.practicum.ewm.stats.proto.collector.ActionTypeProto;
 import ru.practicum.explorewithme.interaction.dto.EventInternalDto;
 import ru.practicum.explorewithme.interaction.dto.EventState;
 import ru.practicum.explorewithme.interaction.dto.UserShortDto;
 import ru.practicum.explorewithme.interaction.exception.ConflictException;
 import ru.practicum.explorewithme.interaction.feign.EventClient;
 import ru.practicum.explorewithme.interaction.feign.UserClient;
+import ru.practicum.explorewithme.interaction.grpc.CollectorGrpcClient;
 import ru.practicum.explorewithme.request.dal.EventRequestRepository;
 import ru.practicum.explorewithme.request.dto.EventRequestStatusUpdateRequest;
 import ru.practicum.explorewithme.request.dto.EventRequestStatusUpdateResult;
@@ -23,8 +25,8 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,6 +38,8 @@ class EventRequestServiceImplTest {
     private EventClient eventClient;
     @Mock
     private UserClient userClient;
+    @Mock
+    private CollectorGrpcClient collectorGrpcClient;
 
     @InjectMocks
     private EventRequestServiceImpl requestService;
@@ -77,7 +81,8 @@ class EventRequestServiceImplTest {
 
         when(eventRequestRepository.findAllByIdInAndStatus(List.of(10L), ParticipationRequestStatus.PENDING))
                 .thenReturn(List.of(req));
-        when(eventRequestRepository.countByEventIdAndStatus(EVENT_ID, ParticipationRequestStatus.CONFIRMED)).thenReturn(0);
+        when(eventRequestRepository.countByEventIdAndStatus(
+                EVENT_ID, ParticipationRequestStatus.CONFIRMED)).thenReturn(0);
         when(eventRequestRepository.saveAll(anyList())).thenReturn(List.of());
 
         EventRequestStatusUpdateRequest updateReq = EventRequestStatusUpdateRequest.builder()
@@ -118,6 +123,8 @@ class EventRequestServiceImplTest {
         ParticipationRequestDto result = requestService.saveEventParticipation(2L, EVENT_ID);
 
         assertThat(result.getStatus()).isEqualTo(ParticipationRequestStatus.PENDING);
+        verify(collectorGrpcClient).collectUserAction(eq(2L), eq(EVENT_ID),
+                eq(ActionTypeProto.ACTION_REGISTER), any());
     }
 
     @Test
