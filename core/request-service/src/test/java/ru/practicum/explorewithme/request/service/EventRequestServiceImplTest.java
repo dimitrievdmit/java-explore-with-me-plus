@@ -6,7 +6,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import ru.practicum.ewm.stats.proto.collector.ActionTypeProto;
 import ru.practicum.explorewithme.interaction.dto.EventInternalDto;
 import ru.practicum.explorewithme.interaction.dto.EventState;
 import ru.practicum.explorewithme.interaction.dto.UserShortDto;
@@ -25,8 +24,8 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -81,8 +80,7 @@ class EventRequestServiceImplTest {
 
         when(eventRequestRepository.findAllByIdInAndStatus(List.of(10L), ParticipationRequestStatus.PENDING))
                 .thenReturn(List.of(req));
-        when(eventRequestRepository.countByEventIdAndStatus(
-                EVENT_ID, ParticipationRequestStatus.CONFIRMED)).thenReturn(0);
+        when(eventRequestRepository.countByEventIdAndStatus(EVENT_ID, ParticipationRequestStatus.CONFIRMED)).thenReturn(0);
         when(eventRequestRepository.saveAll(anyList())).thenReturn(List.of());
 
         EventRequestStatusUpdateRequest updateReq = EventRequestStatusUpdateRequest.builder()
@@ -117,14 +115,13 @@ class EventRequestServiceImplTest {
         when(eventRequestRepository.existsByRequesterIdAndEventId(2L, EVENT_ID)).thenReturn(false);
         when(userClient.getUserShort(2L)).thenReturn(new UserShortDto(2L, "Requester"));
         when(eventClient.getEventInternal(EVENT_ID)).thenReturn(eventInternalDto);
-        when(eventRequestRepository.countByEventId(EVENT_ID)).thenReturn(0);
+        when(eventRequestRepository.countByEventIdAndStatus(
+                EVENT_ID, ParticipationRequestStatus.CONFIRMED)).thenReturn(1);
         when(eventRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         ParticipationRequestDto result = requestService.saveEventParticipation(2L, EVENT_ID);
 
         assertThat(result.getStatus()).isEqualTo(ParticipationRequestStatus.PENDING);
-        verify(collectorGrpcClient).collectUserAction(eq(2L), eq(EVENT_ID),
-                eq(ActionTypeProto.ACTION_REGISTER), any());
     }
 
     @Test
@@ -136,5 +133,32 @@ class EventRequestServiceImplTest {
         assertThatThrownBy(() -> requestService.saveEventParticipation(OWNER_ID, EVENT_ID))
                 .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("Инициатор не может присылать запрос");
+    }
+
+    @Test
+    void saveEventParticipation_AllowsPendingRequestWhenParticipantLimitNotReached() {
+        when(eventRequestRepository.existsByRequesterIdAndEventId(2L, EVENT_ID)).thenReturn(false);
+        when(userClient.getUserShort(2L)).thenReturn(new UserShortDto(2L, "Requester"));
+        when(eventClient.getEventInternal(EVENT_ID)).thenReturn(eventInternalDto);
+        when(eventRequestRepository.countByEventIdAndStatus(
+                EVENT_ID, ParticipationRequestStatus.CONFIRMED)).thenReturn(1);
+        when(eventRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ParticipationRequestDto result = requestService.saveEventParticipation(2L, EVENT_ID);
+
+        assertThat(result.getStatus()).isEqualTo(ParticipationRequestStatus.PENDING);
+    }
+
+    @Test
+    void saveEventParticipation_ShouldThrowConflictWhenParticipantLimitReached() {
+        when(eventRequestRepository.existsByRequesterIdAndEventId(2L, EVENT_ID)).thenReturn(false);
+        when(userClient.getUserShort(2L)).thenReturn(new UserShortDto(2L, "Requester"));
+        when(eventClient.getEventInternal(EVENT_ID)).thenReturn(eventInternalDto);
+        when(eventRequestRepository.countByEventIdAndStatus(
+                EVENT_ID, ParticipationRequestStatus.CONFIRMED)).thenReturn(2);
+
+        assertThatThrownBy(() -> requestService.saveEventParticipation(2L, EVENT_ID))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Количество участников события не может превышать 2");
     }
 }

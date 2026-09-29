@@ -178,7 +178,8 @@ public class EventRequestServiceImpl implements EventRequestService {
                 .created(LocalDateTime.now())
                 .build();
 
-        Integer numParticipants = eventRequestRepository.countByEventId(eventId);
+        Integer numParticipants = eventRequestRepository.countByEventIdAndStatus(
+                eventId, ParticipationRequestStatus.CONFIRMED);
         log.info("limit={}, confirmed={}", event.getParticipantLimit(), numParticipants);
 
         if (event.getParticipantLimit() == 0) {

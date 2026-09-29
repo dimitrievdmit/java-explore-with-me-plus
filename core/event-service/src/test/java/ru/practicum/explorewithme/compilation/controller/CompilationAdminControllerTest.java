@@ -56,4 +56,25 @@ class CompilationAdminControllerTest {
 
         mockMvc.perform(delete("/admin/compilations/1")).andExpect(status().isNoContent());
     }
+
+    @Test
+    void createCompilation_InvalidTitle_ShouldReturn400() throws Exception {
+        NewCompilationDto request = new NewCompilationDto("a".repeat(51), false, List.of());
+
+        mockMvc.perform(post("/admin/compilations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateCompilation_InvalidTitle_ShouldReturn400() throws Exception {
+        UpdateCompilationRequestDto request =
+                new UpdateCompilationRequestDto("a".repeat(51), true, List.of());
+
+        mockMvc.perform(patch("/admin/compilations/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
 }

@@ -13,7 +13,7 @@ import java.util.List;
 @Builder
 public class NewCompilationDto {
     @NotBlank
-    @Size(min = 1, max = 50)
+    @Size(min = 1, max = 50, message = "Название компиляции должно быть более 1 и менее 50 символов")
     private String title;
 
     private Boolean pinned;
