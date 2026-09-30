@@ -106,37 +106,15 @@ public class EventRequestServiceImpl implements EventRequestService {
         int currentConfirmed = eventRequestRepository.countByEventIdAndStatus(
                 event.getId(), ParticipationRequestStatus.CONFIRMED);
         int limit = event.getParticipantLimit();
-        int remaining = limit - currentConfirmed;
+
+        if (currentConfirmed + requests.size() > limit) {
+            throw new ConflictException(
+                    "Количество участников события не может превышать " + limit);
+        }
 
         for (ParticipationRequest r : requests) {
-            if (remaining > 0) {
-                r.setStatus(ParticipationRequestStatus.CONFIRMED);
-                confirmed.add(r);
-                remaining--;
-            } else {
-                r.setStatus(ParticipationRequestStatus.REJECTED);
-                rejected.add(r);
-            }
-        }
-
-        if (remaining == 0) {
-            rejectRemainingPending(requests, rejected);
-        }
-    }
-
-    private void rejectRemainingPending(List<ParticipationRequest> processedRequests,
-                                        List<ParticipationRequest> rejectedContainer) {
-        List<Long> pendingIds = processedRequests.stream()
-                .filter(r -> r.getStatus() == ParticipationRequestStatus.PENDING)
-                .map(ParticipationRequest::getId)
-                .collect(Collectors.toList());
-        if (!pendingIds.isEmpty()) {
-            List<ParticipationRequest> stillPending = eventRequestRepository.findAllByIdInAndStatus(
-                    pendingIds, ParticipationRequestStatus.PENDING);
-            for (ParticipationRequest r : stillPending) {
-                r.setStatus(ParticipationRequestStatus.REJECTED);
-                rejectedContainer.add(r);
-            }
+            r.setStatus(ParticipationRequestStatus.CONFIRMED);
+            confirmed.add(r);
         }
     }
 
@@ -178,17 +156,17 @@ public class EventRequestServiceImpl implements EventRequestService {
                 .created(LocalDateTime.now())
                 .build();
 
-        Integer numParticipants = eventRequestRepository.countByEventIdAndStatus(
-                eventId, ParticipationRequestStatus.CONFIRMED);
-        log.info("limit={}, confirmed={}", event.getParticipantLimit(), numParticipants);
+        int limit = event.getParticipantLimit();
+        int confirmed = eventRequestRepository.countByEventIdAndStatus(eventId, ParticipationRequestStatus.CONFIRMED);
+        log.info("limit={}, confirmed={}", limit, confirmed);
 
-        if (event.getParticipantLimit() == 0) {
-            request.setStatus(ParticipationRequestStatus.CONFIRMED);
-        } else if (event.getParticipantLimit() > numParticipants) {
-            request.setStatus(ParticipationRequestStatus.PENDING);
-        } else {
-            throw new ConflictException("Количество участников события не может превышать " + event.getParticipantLimit());
+        if (limit > 0 && confirmed >= limit) {
+            throw new ConflictException("Количество участников события не может превышать " + limit);
         }
+
+        boolean autoConfirm = limit == 0 || !event.getRequestModeration();
+        request.setStatus(autoConfirm ? ParticipationRequestStatus.CONFIRMED : ParticipationRequestStatus.PENDING);
+
         ParticipationRequest savedRequest = eventRequestRepository.save(request);
         collectorGrpcClient.collectUserAction(userId, eventId, ActionTypeProto.ACTION_REGISTER,
                 java.time.Instant.now());

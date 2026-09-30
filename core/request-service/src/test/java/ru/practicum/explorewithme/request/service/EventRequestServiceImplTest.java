@@ -150,14 +150,34 @@ class EventRequestServiceImplTest {
     }
 
     @Test
-    void saveEventParticipation_ShouldThrowConflictWhenParticipantLimitReached() {
-        when(eventRequestRepository.existsByRequesterIdAndEventId(2L, EVENT_ID)).thenReturn(false);
-        when(userClient.getUserShort(2L)).thenReturn(new UserShortDto(2L, "Requester"));
+    void updateEventRequests_ConflictWhenParticipantLimitExceeded() {
         when(eventClient.getEventInternal(EVENT_ID)).thenReturn(eventInternalDto);
-        when(eventRequestRepository.countByEventIdAndStatus(
-                EVENT_ID, ParticipationRequestStatus.CONFIRMED)).thenReturn(2);
 
-        assertThatThrownBy(() -> requestService.saveEventParticipation(2L, EVENT_ID))
+        ParticipationRequest first = ParticipationRequest.builder()
+                .id(10L)
+                .requesterId(2L)
+                .eventId(EVENT_ID)
+                .status(ParticipationRequestStatus.PENDING)
+                .build();
+        ParticipationRequest second = ParticipationRequest.builder()
+                .id(11L)
+                .requesterId(3L)
+                .eventId(EVENT_ID)
+                .status(ParticipationRequestStatus.PENDING)
+                .build();
+
+        List<Long> requestIds = List.of(10L, 11L);
+        when(eventRequestRepository.findAllByIdInAndStatus(requestIds, ParticipationRequestStatus.PENDING))
+                .thenReturn(List.of(first, second));
+        when(eventRequestRepository.countByEventIdAndStatus(
+                EVENT_ID, ParticipationRequestStatus.CONFIRMED)).thenReturn(1);
+
+        EventRequestStatusUpdateRequest updateReq = EventRequestStatusUpdateRequest.builder()
+                .requestIds(requestIds)
+                .status(ParticipationRequestStatus.CONFIRMED)
+                .build();
+
+        assertThatThrownBy(() -> requestService.updateEventRequests(OWNER_ID, EVENT_ID, updateReq))
                 .isInstanceOf(ConflictException.class)
                 .hasMessage("Количество участников события не может превышать 2");
     }
