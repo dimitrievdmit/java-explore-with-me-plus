@@ -1,17 +1,28 @@
 package ru.practicum.explorewithme.interaction.grpc;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
 import org.springframework.stereotype.Component;
 import ru.practicum.ewm.stats.proto.dashboard.*;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
+@Slf4j
 @Component
+@RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "grpc.client.analyzer", name = "address")
 public class AnalyzerGrpcClient {
+
+    private final CircuitBreakerFactory<?, ?> circuitBreakerFactory;
+
     @GrpcClient("analyzer")
     private RecommendationsControllerGrpc.RecommendationsControllerBlockingStub client;
 
@@ -20,7 +31,18 @@ public class AnalyzerGrpcClient {
                 .setUserId(userId)
                 .setMaxResults(maxResults)
                 .build();
-        return asStream(client.getRecommendationsForUser(request));
+
+        List<RecommendedEventProto> events = circuitBreakerFactory.create("analyzer").run(
+                () -> readAll(client.getRecommendationsForUser(request)),
+                cause -> {
+                    log.warn(
+                            "analyzer недоступен, рекомендации для userId={} " +
+                                    "временно недоступны",
+                            userId, cause);
+                    return List.of();
+                }
+        );
+        return events.stream();
     }
 
     public Stream<RecommendedEventProto> getSimilarEvents(long eventId, long userId, int maxResults) {
@@ -29,7 +51,18 @@ public class AnalyzerGrpcClient {
                 .setUserId(userId)
                 .setMaxResults(maxResults)
                 .build();
-        return asStream(client.getSimilarEvents(request));
+
+        List<RecommendedEventProto> events = circuitBreakerFactory.create("analyzer").run(
+                () -> readAll(client.getSimilarEvents(request)),
+                cause -> {
+                    log.warn(
+                            "analyzer недоступен, похожие события для eventId={} " +
+                                    "временно недоступны",
+                            eventId, cause);
+                    return List.of();
+                }
+        );
+        return events.stream();
     }
 
     public Map<Long, Double> getInteractionsCount(List<Long> eventIds) {
@@ -39,17 +72,27 @@ public class AnalyzerGrpcClient {
         InteractionsCountRequestProto request = InteractionsCountRequestProto.newBuilder()
                 .addAllEventId(eventIds)
                 .build();
-        return asStream(client.getInteractionsCount(request))
-                .collect(java.util.stream.Collectors.toMap(
-                        RecommendedEventProto::getEventId,
-                        RecommendedEventProto::getScore,
-                        Math::max));
+
+        List<RecommendedEventProto> events = circuitBreakerFactory.create("analyzer").run(
+                () -> readAll(client.getInteractionsCount(request)),
+                cause -> {
+                    log.warn(
+                            "analyzer недоступен, статистика по {} событиям " +
+                                    "временно недоступна",
+                            eventIds.size(), cause);
+                    return List.of();
+                }
+        );
+
+        return events.stream().collect(Collectors.toMap(
+                RecommendedEventProto::getEventId,
+                RecommendedEventProto::getScore,
+                Math::max));
     }
 
-    private Stream<RecommendedEventProto> asStream(Iterator<RecommendedEventProto> iterator) {
-        return StreamSupport.stream(
-                Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED),
-                false
-        );
+    private List<RecommendedEventProto> readAll(Iterator<RecommendedEventProto> iterator) {
+        List<RecommendedEventProto> result = new ArrayList<>();
+        iterator.forEachRemaining(result::add);
+        return result;
     }
 }

@@ -50,6 +50,10 @@ resilience4j:
         base-config: default
       request-service:
         base-config: default
+      collector:
+        base-config: default
+      analyzer:
+        base-config: default
   timelimiter:
     configs:
       default:
@@ -59,6 +63,12 @@ resilience4j:
         base-config: default
       request-service:
         base-config: default
+      collector:
+        base-config: default
+        timeout-duration: 1s
+      analyzer:
+        base-config: default
+        timeout-duration: 2s
 
 grpc:
   client:
@@ -79,4 +89,3 @@ kafka:
   consumer:
     group-id: event-service-ratings
     auto-offset-reset: earliest
-
