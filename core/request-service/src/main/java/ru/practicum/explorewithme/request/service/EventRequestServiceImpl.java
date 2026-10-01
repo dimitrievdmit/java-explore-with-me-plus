@@ -41,7 +41,7 @@ public class EventRequestServiceImpl implements EventRequestService {
     @Override
     public List<ParticipationRequestDto> getEventRequests(Long userId, Long eventId) {
         log.info("Получение заявок на событие id={} пользователя id={}", eventId, userId);
-        EventInternalDto event = getEventAndValidateOwnership(userId, eventId);
+        getEventAndValidateOwnership(userId, eventId);
         List<ParticipationRequest> requests = eventRequestRepository.findAllByEventId(eventId);
         return requests.stream().map(ParticipationRequestMapper::toDto).collect(Collectors.toList());
     }
