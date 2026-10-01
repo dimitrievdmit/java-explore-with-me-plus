@@ -8,13 +8,10 @@ import ru.practicum.explorewithme.request.enums.ParticipationRequestStatus;
 import ru.practicum.explorewithme.request.model.ParticipationRequest;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface EventRequestRepository extends JpaRepository<ParticipationRequest, Long> {
 
     List<ParticipationRequest> findAllByEventId(Long eventId);
-
-    Optional<ParticipationRequest> findByEventIdAndRequesterId(Long eventId, Long requesterId);
 
     Integer countByEventIdAndStatus(Long eventId, ParticipationRequestStatus status);
 
