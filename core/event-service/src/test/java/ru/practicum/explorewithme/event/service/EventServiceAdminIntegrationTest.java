@@ -58,7 +58,6 @@ class EventServiceAdminIntegrationTest {
                 new UserShortDto(inv.getArgument(0), "User " + inv.getArgument(0)));
         when(userClient.getUsersShort(anyList())).thenReturn(
                 List.of(new UserShortDto(USER1_ID, "User 1"), new UserShortDto(USER2_ID, "User 2")));
-        when(analyzerGrpcClient.getInteractionsCount(anyList())).thenReturn(Collections.emptyMap());
         when(requestClient.getConfirmedRequestsCounts(any(EventIdListDto.class))).thenReturn(Collections.emptyList());
     }
 

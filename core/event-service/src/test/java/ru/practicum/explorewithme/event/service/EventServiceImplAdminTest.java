@@ -95,9 +95,8 @@ class EventServiceImplAdminTest {
     @Test
     void updateEventByAdmin_Publish_Success() {
         when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
-        when(eventRepository.save(any())).thenReturn(event);
-        when(requestClient.getConfirmedRequestsCounts(any(EventIdListDto.class))).thenReturn(Collections.emptyList());
-        when(userClient.getUserShort(INITIATOR_ID)).thenReturn(new UserShortDto(INITIATOR_ID, "User"));
+        when(requestClient.getConfirmedRequestsCounts(any(EventIdListDto.class)))
+                .thenReturn(Collections.emptyList());
 
         UpdateEventAdminRequest request = UpdateEventAdminRequest.builder()
                 .stateAction(AdminEventStateAction.PUBLISH_EVENT)
@@ -139,9 +138,8 @@ class EventServiceImplAdminTest {
     @Test
     void updateEventByAdmin_Reject_Success() {
         when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
-        when(eventRepository.save(any())).thenReturn(event);
-        when(requestClient.getConfirmedRequestsCounts(any(EventIdListDto.class))).thenReturn(Collections.emptyList());
-        when(userClient.getUserShort(INITIATOR_ID)).thenReturn(new UserShortDto(INITIATOR_ID, "User"));
+        when(requestClient.getConfirmedRequestsCounts(any(EventIdListDto.class)))
+                .thenReturn(Collections.emptyList());
 
         UpdateEventAdminRequest request = UpdateEventAdminRequest.builder()
                 .stateAction(AdminEventStateAction.REJECT_EVENT)

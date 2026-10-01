@@ -54,7 +54,6 @@ class EventRadiusIntegrationTest {
         when(userClient.getUserShort(anyLong())).thenReturn(new UserShortDto(USER_ID, "User"));
         when(userClient.getUsersShort(anyList())).thenReturn(List.of(new UserShortDto(USER_ID, "User")));
         when(requestClient.getConfirmedRequestsCounts(any(EventIdListDto.class))).thenReturn(Collections.emptyList());
-        when(analyzerGrpcClient.getInteractionsCount(anyList())).thenReturn(Collections.emptyMap());
 
         Category category = categoryRepository.save(new Category(null, "RadiusTest"));
 

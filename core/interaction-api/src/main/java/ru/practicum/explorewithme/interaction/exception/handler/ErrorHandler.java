@@ -11,12 +11,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import ru.practicum.explorewithme.interaction.exception.BadRequestException;
-import ru.practicum.explorewithme.interaction.exception.ConflictException;
-import ru.practicum.explorewithme.interaction.exception.DuplicatedDataException;
-import ru.practicum.explorewithme.interaction.exception.NotFoundException;
+import ru.practicum.explorewithme.interaction.exception.*;
 import ru.practicum.explorewithme.interaction.exception.dto.ApiError;
 
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -73,14 +71,30 @@ public class ErrorHandler {
     @ResponseStatus(HttpStatus.CONFLICT)
     public ApiError handleDataIntegrityViolation(final DataIntegrityViolationException e) {
         log.warn("Нарушение целостности данных: {}", e.getMostSpecificCause().getMessage());
-        return new ApiError(HttpStatus.CONFLICT.name(), "Нарушение целостности данных", e.getMostSpecificCause().getMessage());
+        return new ApiError(HttpStatus.CONFLICT.name(), "Нарушение целостности данных", "Операция нарушает ограничение целостности данных");
+    }
+
+    @ExceptionHandler(ServiceUnavailableException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ApiError handleServiceUnavailable(final ServiceUnavailableException e) {
+        log.error("Недоступен внешний сервис: {}", e.getMessage(), e);
+        return new ApiError(HttpStatus.SERVICE_UNAVAILABLE.name(),
+                "Внешний сервис временно недоступен", e.getMessage());
+    }
+
+    @ExceptionHandler(DateTimeParseException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiError handleDateTimeParseException(final DateTimeParseException e) {
+        log.warn("Некорректная дата: {}", e.getMessage());
+        return new ApiError(HttpStatus.BAD_REQUEST.name(),
+                "Некорректный запрос", "Дата и время имеют неверный формат");
     }
 
     @ExceptionHandler(Throwable.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ApiError handleThrowable(final Throwable e) {
         log.error("Внутренняя ошибка сервера: {}", e.getMessage(), e);
-        return new ApiError(HttpStatus.INTERNAL_SERVER_ERROR.name(), "Внутренняя ошибка сервера", e.getMessage() != null ? e.getMessage() : "Неизвестная ошибка");
+        return new ApiError(HttpStatus.INTERNAL_SERVER_ERROR.name(), "Внутренняя ошибка сервера", "Внутренняя ошибка сервера");
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
@@ -89,7 +103,7 @@ public class ErrorHandler {
 
         List<String> errors = e.getConstraintViolations().stream().map(v -> "Поле: " + v.getPropertyPath() + ". Ошибка: " + v.getMessage()).collect(Collectors.toList());
 
-        log.warn("Ошибка валидации (Hibernate): {}", errors);
+        log.warn("Ошибка валидации (Hibernate): {}", errors, e);
 
         return new ApiError(HttpStatus.BAD_REQUEST.name(), "Некорректный запрос", "Ошибка валидации Entity", errors);
     }
@@ -97,9 +111,9 @@ public class ErrorHandler {
     @ExceptionHandler(MissingServletRequestParameterException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiError handleMissingArgumentParameterException(final MissingServletRequestParameterException e) {
-        String message = "Отсутствует обязательный параметр" + e.getParameterName();
+        String message = "Отсутствует обязательный параметр: " + e.getParameterName();
         log.warn("Ошибка запроса - {}", message);
-        return new ApiError(HttpStatus.BAD_REQUEST.name(), "некорректный запрос", message);
+        return new ApiError(HttpStatus.BAD_REQUEST.name(), "Некорректный запрос", message);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)

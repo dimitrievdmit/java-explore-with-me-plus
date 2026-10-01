@@ -34,7 +34,6 @@ import ru.practicum.explorewithme.interaction.grpc.CollectorGrpcClient;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -158,7 +157,6 @@ class EventServiceImplTest {
         Event event = createEventWithDefaults();
         event.setState(EventState.PENDING);
         when(eventRepository.findByIdAndInitiatorId(1L, USER_ID)).thenReturn(Optional.of(event));
-        when(eventRepository.save(any())).thenReturn(event);
         when(requestClient.getConfirmedRequestsCounts(any(EventIdListDto.class))).thenReturn(Collections.emptyList());
         when(userClient.getUserShort(USER_ID)).thenReturn(userShortDto);
 
@@ -211,7 +209,7 @@ class EventServiceImplTest {
         when(eventRepository.findAll(any(BooleanExpression.class), pageableCaptor.capture())).thenReturn(page);
         when(requestClient.getConfirmedRequestsCounts(any(EventIdListDto.class))).thenReturn(Collections.emptyList());
         when(userClient.getUsersShort(anyList())).thenReturn(List.of(userShortDto));
-        when(analyzerGrpcClient.getInteractionsCount(anyList())).thenReturn(Map.of(event.getId(), 7.5));
+        event.setRating(7.5);
 
         List<EventShortDto> result = eventService.getEventsPublic(params);
 
@@ -262,7 +260,6 @@ class EventServiceImplTest {
         List<EventFullDto> result = eventService.searchEventsByRadius(-90f, 0f, 1f, 0, 10);
 
         assertThat(result).isEmpty();
-        verify(analyzerGrpcClient, never()).getInteractionsCount(anyList());
     }
 
     @Test
@@ -328,7 +325,7 @@ class EventServiceImplTest {
         when(eventRepository.findAllById(List.of(1L, 2L))).thenReturn(List.of(published, unpublished));
         when(requestClient.getConfirmedRequestsCounts(any(EventIdListDto.class))).thenReturn(Collections.emptyList());
         when(userClient.getUsersShort(anyList())).thenReturn(List.of(userShortDto));
-        when(analyzerGrpcClient.getInteractionsCount(anyList())).thenReturn(Map.of(1L, 5.0));
+        published.setRating(5.0);
 
         List<EventShortDto> result = eventService.getRecommendationsForUser(USER_ID, 10);
 

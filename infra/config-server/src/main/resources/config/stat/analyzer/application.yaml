@@ -6,7 +6,6 @@ spring:
   sql:
     init:
       mode: always
-      continue-on-error: true
   datasource:
     url: jdbc:postgresql://localhost:5432/ewm_stats_db
     username: postgres

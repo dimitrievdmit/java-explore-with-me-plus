@@ -24,9 +24,9 @@ public class UserEventInteraction {
     @Column(name = "event_id")
     private Long eventId;
 
-    @Column(nullable = false)
+    @Column(name = "weight", nullable = false)
     private Double weight;
 
-    @Column(nullable = false)
+    @Column(name = "timestamp", nullable = false)
     private Instant timestamp;
 }

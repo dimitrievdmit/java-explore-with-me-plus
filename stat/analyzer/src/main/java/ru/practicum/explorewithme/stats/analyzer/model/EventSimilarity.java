@@ -24,9 +24,9 @@ public class EventSimilarity {
     @Column(name = "event_b")
     private Long eventB;
 
-    @Column(nullable = false)
+    @Column(name = "score", nullable = false)
     private Double score;
 
-    @Column(nullable = false)
+    @Column(name = "timestamp", nullable = false)
     private Instant timestamp;
 }

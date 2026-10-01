@@ -19,9 +19,10 @@ import java.time.LocalDateTime;
 public class ParticipationRequest {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     Long id;
 
-    @Column(nullable = false)
+    @Column(name = "created", nullable = false)
     LocalDateTime created;
 
     @Column(name = "event_id", nullable = false)
@@ -31,6 +32,6 @@ public class ParticipationRequest {
     Long requesterId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "status", nullable = false)
     ParticipationRequestStatus status;
 }

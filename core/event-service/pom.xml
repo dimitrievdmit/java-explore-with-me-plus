@@ -139,6 +139,12 @@
                             <version>5.1.0</version>
                         </path>
                         <path>
+                            <groupId>com.querydsl</groupId>
+                            <artifactId>querydsl-jpa</artifactId>
+                            <classifier>jakarta</classifier>
+                            <version>5.1.0</version>
+                        </path>
+                        <path>
                             <groupId>jakarta.persistence</groupId>
                             <artifactId>jakarta.persistence-api</artifactId>
                             <version>3.1.0</version>

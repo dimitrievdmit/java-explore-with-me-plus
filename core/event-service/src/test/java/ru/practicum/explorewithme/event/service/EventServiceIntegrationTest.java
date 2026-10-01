@@ -19,7 +19,6 @@ import ru.practicum.explorewithme.interaction.grpc.CollectorGrpcClient;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -59,7 +58,6 @@ class EventServiceIntegrationTest {
                 new UserShortDto(inv.getArgument(0), "User " + inv.getArgument(0)));
         when(userClient.getUsersShort(anyList())).thenReturn(
                 List.of(new UserShortDto(USER1_ID, "User 1"), new UserShortDto(USER2_ID, "User 2")));
-        when(analyzerGrpcClient.getInteractionsCount(anyList())).thenReturn(Collections.emptyMap());
     }
 
     @Test

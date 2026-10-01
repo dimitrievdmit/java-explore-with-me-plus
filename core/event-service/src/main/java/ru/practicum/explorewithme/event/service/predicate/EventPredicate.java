@@ -6,8 +6,6 @@ import ru.practicum.explorewithme.event.dto.EventSearchParamsAdmin;
 import ru.practicum.explorewithme.event.model.QEvent;
 import ru.practicum.explorewithme.interaction.dto.EventState;
 
-import java.time.LocalDateTime;
-
 public class EventPredicate {
     public static BooleanExpression build(EventSearchParams params) {
         QEvent event = QEvent.event;
@@ -15,18 +13,24 @@ public class EventPredicate {
         BooleanExpression predicate = event.state.eq(EventState.PUBLISHED);
 
         if (params.getText() != null && !params.getText().isBlank()) {
-            predicate = predicate.and(event.annotation.containsIgnoreCase(params.getText()));
+            String text = params.getText().trim();
+            predicate = predicate.and(
+                    event.annotation.containsIgnoreCase(text)
+                            .or(event.description.containsIgnoreCase(text)));
         }
 
-        if (params.getCategories() != null && params.getCategories().isEmpty()) {
+        if (params.getCategories() != null && !params.getCategories().isEmpty()) {
             predicate = predicate.and(event.category.id.in(params.getCategories()));
         }
 
         if (params.getPaid() != null) {
             predicate = predicate.and(event.paid.eq(params.getPaid()));
+        }
 
-            LocalDateTime start = params.getRangeStart() != null ? params.getRangeStart() : LocalDateTime.now();
-            predicate = predicate.and(event.eventDate.goe(start));
+        if (params.getRangeStart() != null) {
+            predicate = predicate.and(event.eventDate.goe(params.getRangeStart()));
+        } else {
+            predicate = predicate.and(event.eventDate.goe(java.time.LocalDateTime.now()));
         }
 
         if (params.getRangeEnd() != null) {

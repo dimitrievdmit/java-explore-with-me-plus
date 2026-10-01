@@ -49,19 +49,14 @@ public class AggregationWorker implements SmartLifecycle {
         consumer.subscribe(List.of(inputTopic));
         try {
             while (running) {
-                ConsumerRecords<String, UserActionAvro> records = consumer.poll(Duration.ofSeconds(1));
-                for (var record : records) {
-                    UserActionAvro action = record.value();
-                    if (action == null) {
-                        continue;
+                try {
+                    processBatch();
+                } catch (WakeupException e) {
+                    if (running) {
+                        throw e;
                     }
-                    for (EventSimilarityAvro similarity : calculator.process(action)) {
-                        producer.send(new ProducerRecord<>(outputTopic, similarity.getEventA() + ":" + similarity.getEventB(), similarity));
-                    }
-                }
-                producer.flush();
-                if (!records.isEmpty()) {
-                    consumer.commitSync();
+                } catch (Exception e) {
+                    log.error("Ошибка обработки очередной порции Kafka в Aggregator, продолжение работы", e);
                 }
             }
         } catch (WakeupException e) {
@@ -76,6 +71,29 @@ public class AggregationWorker implements SmartLifecycle {
             } catch (Exception ignored) {
                 // игнорировать ошибки при выключении
             }
+        }
+    }
+
+    private void processBatch() {
+        ConsumerRecords<String, UserActionAvro> records = consumer.poll(Duration.ofSeconds(1));
+        for (var record : records) {
+            UserActionAvro action = record.value();
+            if (action == null) {
+                continue;
+            }
+            try {
+                for (EventSimilarityAvro similarity : calculator.process(action)) {
+                    producer.send(new ProducerRecord<>(outputTopic,
+                            similarity.getEventA() + ":" + similarity.getEventB(), similarity));
+                }
+            } catch (Exception e) {
+                log.error("Ошибка обработки Kafka-сообщения с key={}", record.key(), e);
+                throw e;
+            }
+        }
+        producer.flush();
+        if (!records.isEmpty()) {
+            consumer.commitSync();
         }
     }
 

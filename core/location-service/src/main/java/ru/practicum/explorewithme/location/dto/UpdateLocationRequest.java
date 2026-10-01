@@ -1,7 +1,7 @@
 package ru.practicum.explorewithme.location.dto;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -16,12 +16,12 @@ public class UpdateLocationRequest {
     @Size(max = 120)
     String name;
 
-    @Min(-90)
-    @Max(90)
+    @DecimalMin("-90")
+    @DecimalMax("90")
     Float lat;
 
-    @Min(-180)
-    @Max(180)
+    @DecimalMin("-180")
+    @DecimalMax("180")
     Float lon;
 
     @Positive

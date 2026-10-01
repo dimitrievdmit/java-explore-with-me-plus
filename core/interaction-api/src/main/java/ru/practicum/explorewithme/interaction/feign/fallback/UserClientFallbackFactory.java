@@ -6,6 +6,7 @@ import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 import ru.practicum.explorewithme.interaction.dto.UserShortDto;
 import ru.practicum.explorewithme.interaction.exception.NotFoundException;
+import ru.practicum.explorewithme.interaction.exception.ServiceUnavailableException;
 import ru.practicum.explorewithme.interaction.feign.UserClient;
 
 import java.util.List;
@@ -23,8 +24,8 @@ public class UserClientFallbackFactory implements FallbackFactory<UserClient> {
                 if (cause instanceof NotFoundException) {
                     throw (NotFoundException) cause; // честный 404 — прокидываем как есть
                 }
-                log.warn("user-service недоступен, отдаю заглушку для userId={}", userId, cause);
-                return UserShortDto.builder().id(userId).name("Пользователь недоступен").build();
+                log.warn("user-service недоступен при проверке userId={}", userId, cause);
+                throw new ServiceUnavailableException("user-service", cause);
             }
 
             @Override

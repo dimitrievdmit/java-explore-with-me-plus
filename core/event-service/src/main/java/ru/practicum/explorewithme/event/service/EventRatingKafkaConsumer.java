@@ -44,14 +44,14 @@ public class EventRatingKafkaConsumer implements SmartLifecycle {
         consumer.subscribe(List.of(topic));
         try {
             while (running) {
-                ConsumerRecords<String, EventRatingAvro> records = consumer.poll(Duration.ofSeconds(1));
-                for (var record : records) {
-                    if (record.value() != null) {
-                        updater.update(record.value());
+                try {
+                    processBatch();
+                } catch (WakeupException e) {
+                    if (running) {
+                        throw e;
                     }
-                }
-                if (!records.isEmpty()) {
-                    consumer.commitSync();
+                } catch (Exception e) {
+                    log.error("Ошибка обработки порции Kafka рейтингов в event-service, продолжение работы", e);
                 }
             }
         } catch (WakeupException e) {
@@ -66,6 +66,18 @@ public class EventRatingKafkaConsumer implements SmartLifecycle {
             } catch (Exception ignored) {
                 // игнорировать ошибки при выключении
             }
+        }
+    }
+
+    private void processBatch() {
+        ConsumerRecords<String, EventRatingAvro> records = consumer.poll(Duration.ofSeconds(1));
+        for (var record : records) {
+            if (record.value() != null) {
+                updater.update(record.value());
+            }
+        }
+        if (!records.isEmpty()) {
+            consumer.commitSync();
         }
     }
 

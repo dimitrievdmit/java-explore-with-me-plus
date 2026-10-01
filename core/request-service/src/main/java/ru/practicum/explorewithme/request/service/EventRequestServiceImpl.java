@@ -25,6 +25,7 @@ import ru.practicum.explorewithme.request.model.ParticipationRequest;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -55,13 +56,13 @@ public class EventRequestServiceImpl implements EventRequestService {
         validateRequestPrerequisites(event);
 
         ParticipationRequestStatus newStatus = validateNewStatus(request.getStatus());
-        List<ParticipationRequest> pendingRequests = getPendingRequestsOrThrow(request.getRequestIds());
+        List<ParticipationRequest> pendingRequests = getPendingRequestsOrThrow(eventId, request.getRequestIds());
 
         List<ParticipationRequest> confirmed = new ArrayList<>();
         List<ParticipationRequest> rejected = new ArrayList<>();
 
         if (newStatus == ParticipationRequestStatus.CONFIRMED) {
-            processConfirmation(event, pendingRequests, confirmed, rejected);
+            processConfirmation(event, request.getRequestIds(), pendingRequests, confirmed, rejected);
         } else {
             rejectAll(pendingRequests, rejected);
         }
@@ -92,29 +93,41 @@ public class EventRequestServiceImpl implements EventRequestService {
         return status;
     }
 
-    private List<ParticipationRequest> getPendingRequestsOrThrow(List<Long> requestIds) {
-        List<ParticipationRequest> requests = eventRequestRepository.findAllByIdInAndStatus(
-                requestIds, ParticipationRequestStatus.PENDING);
+    private List<ParticipationRequest> getPendingRequestsOrThrow(Long eventId, List<Long> requestIds) {
+        List<ParticipationRequest> requests = eventRequestRepository.findAllByIdInAndEventIdAndStatus(
+                requestIds, eventId, ParticipationRequestStatus.PENDING);
         if (requests.size() != requestIds.size()) {
             throw new ConflictException("Не все заявки находятся в состоянии ожидания");
         }
         return requests;
     }
 
-    private void processConfirmation(EventInternalDto event, List<ParticipationRequest> requests,
-                                     List<ParticipationRequest> confirmed, List<ParticipationRequest> rejected) {
+    private void processConfirmation(EventInternalDto event, List<Long> requestIds,
+                                     List<ParticipationRequest> requests,
+                                     List<ParticipationRequest> confirmed,
+                                     List<ParticipationRequest> rejected) {
         int currentConfirmed = eventRequestRepository.countByEventIdAndStatus(
                 event.getId(), ParticipationRequestStatus.CONFIRMED);
         int limit = event.getParticipantLimit();
 
-        if (currentConfirmed + requests.size() > limit) {
+        if (currentConfirmed >= limit) {
             throw new ConflictException(
                     "Количество участников события не может превышать " + limit);
         }
 
-        for (ParticipationRequest r : requests) {
-            r.setStatus(ParticipationRequestStatus.CONFIRMED);
-            confirmed.add(r);
+        Map<Long, ParticipationRequest> requestsById = requests.stream()
+                .collect(Collectors.toMap(ParticipationRequest::getId, request -> request));
+        int availableSlots = limit - currentConfirmed;
+
+        for (int i = 0; i < requestIds.size(); i++) {
+            ParticipationRequest request = requestsById.get(requestIds.get(i));
+            if (i < availableSlots) {
+                request.setStatus(ParticipationRequestStatus.CONFIRMED);
+                confirmed.add(request);
+            } else {
+                request.setStatus(ParticipationRequestStatus.REJECTED);
+                rejected.add(request);
+            }
         }
     }
 
@@ -181,9 +194,15 @@ public class EventRequestServiceImpl implements EventRequestService {
     }
 
     @Override
+    @Transactional
     public ParticipationRequestDto removeParticipation(Long userId, Long requestId) {
         ParticipationRequest request = eventRequestRepository.findByIdAndRequesterId(requestId, userId);
-        eventRequestRepository.delete(request);
+        if (request == null) {
+            throw new NotFoundException("Заявка с id=" + requestId + " не найдена");
+        }
+        if (request.getStatus() != ParticipationRequestStatus.PENDING) {
+            throw new ConflictException("Отменить можно только заявку в состоянии ожидания");
+        }
         request.setStatus(ParticipationRequestStatus.CANCELED);
         return ParticipationRequestMapper.toDto(request);
     }

@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.explorewithme.category.dal.CategoryRepository;
 import ru.practicum.explorewithme.category.dto.NewCategoryRequest;
 import ru.practicum.explorewithme.category.dto.UpdateCategoryRequest;
@@ -36,18 +37,20 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Transactional
     public CategoryDto changeCategory(Long catId, UpdateCategoryRequest request) {
+        Category category = categoryRepository.findById(catId)
+                .orElseThrow(() -> new NotFoundException("Категория c id " + catId + " не найдена"));
         if (categoryRepository.findByNameIgnoreCaseAndIdNot(request.getName(), catId).isPresent()) {
-            throw new ConflictException("Такая категория уже существует" + request.getName());
+            throw new ConflictException("Такая категория уже существует: " + request.getName());
         }
-        Category category = categoryRepository.findById(catId).orElseThrow(() -> new NotFoundException("Категория c id " + catId + " не найдена"));
         Category updatedCategory = CategoryMapper.mapToUpdateCategory(request, category);
 
-        categoryRepository.save(updatedCategory);
         return CategoryMapper.mapToCategoryDto(updatedCategory);
     }
 
     @Override
+    @Transactional
     public void removeCategory(Long catId) {
         if (eventRepository.countByCategoryId(catId) > 0) {
             throw new ConflictException("В этой категории уже существуют события");

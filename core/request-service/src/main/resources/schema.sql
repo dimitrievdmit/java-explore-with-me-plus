@@ -6,3 +6,9 @@ CREATE TABLE IF NOT EXISTS participation_requests (
     status VARCHAR(20) NOT NULL,
     CONSTRAINT uq_request UNIQUE (event_id, requester_id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_participation_requests_requester_id
+    ON participation_requests (requester_id);
+
+CREATE INDEX IF NOT EXISTS idx_participation_requests_event_id_status
+    ON participation_requests (event_id, status);

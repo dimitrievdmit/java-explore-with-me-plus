@@ -39,8 +39,11 @@ CREATE INDEX IF NOT EXISTS idx_event_views_user_id
 CREATE INDEX IF NOT EXISTS idx_event_views_event_id
     ON event_views (event_id);
 
-ALTER TABLE events
-    ADD COLUMN IF NOT EXISTS rating DOUBLE PRECISION NOT NULL DEFAULT 0;
+CREATE INDEX IF NOT EXISTS idx_events_category_id
+    ON events (category_id);
+
+CREATE INDEX IF NOT EXISTS idx_events_initiator_id
+    ON events (initiator_id);
 
 CREATE INDEX IF NOT EXISTS idx_events_rating
     ON events (rating DESC, event_date ASC, id ASC);

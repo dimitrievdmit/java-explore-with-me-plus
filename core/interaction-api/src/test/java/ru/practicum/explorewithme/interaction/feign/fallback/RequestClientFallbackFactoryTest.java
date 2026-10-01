@@ -10,7 +10,6 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 
 class RequestClientFallbackFactoryTest {
 
@@ -38,7 +37,10 @@ class RequestClientFallbackFactoryTest {
     void getConfirmedRequestsCounts_EmptyEventIds_ShouldNotFail() {
         RequestClient client = factory.create(new IOException("timeout"));
 
-        List<?> result = client.getConfirmedRequestsCounts(any(EventIdListDto.class));
+        EventIdListDto request = new EventIdListDto();
+        request.setEventIds(List.of());   // или Collections.emptyList(), в зависимости от DTO
+
+        List<?> result = client.getConfirmedRequestsCounts(request);
 
         assertThat(result).isEmpty();
     }
