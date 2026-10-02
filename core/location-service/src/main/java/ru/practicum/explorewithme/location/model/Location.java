@@ -15,17 +15,18 @@ import lombok.experimental.FieldDefaults;
 public class Location {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     Long id;
 
-    @Column(nullable = false, length = 120, unique = true)
+    @Column(name = "name", nullable = false, length = 120, unique = true)
     String name;
 
-    @Column(nullable = false)
+    @Column(name = "lat", nullable = false)
     Float lat;
 
-    @Column(nullable = false)
+    @Column(name = "lon", nullable = false)
     Float lon;
 
-    @Column(nullable = false)
+    @Column(name = "radius", nullable = false)
     Float radius;
 }

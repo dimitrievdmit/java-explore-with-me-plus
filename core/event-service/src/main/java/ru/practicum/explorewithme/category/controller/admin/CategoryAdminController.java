@@ -9,7 +9,6 @@ import ru.practicum.explorewithme.category.dto.NewCategoryRequest;
 import ru.practicum.explorewithme.category.dto.UpdateCategoryRequest;
 import ru.practicum.explorewithme.category.service.CategoryService;
 import ru.practicum.explorewithme.interaction.dto.CategoryDto;
-import ru.practicum.explorewithme.interaction.exception.BadRequestException;
 
 @Slf4j
 @RestController
@@ -29,11 +28,8 @@ public class CategoryAdminController {
     @PatchMapping("/{catId}")
     @ResponseStatus(HttpStatus.OK)
     public CategoryDto createCategory(@PathVariable("catId") Long catId,
-                                      @RequestBody UpdateCategoryRequest categoryRequest) {
+                                      @RequestBody @Valid UpdateCategoryRequest categoryRequest) {
         log.info("Запрос на изменение категории {}", catId);
-        if (categoryRequest.getName().length() > 50) {
-            throw new BadRequestException("Название категории должно быть менее 50");
-        }
         return categoryService.changeCategory(catId, categoryRequest);
     }
 

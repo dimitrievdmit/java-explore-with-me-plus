@@ -1,0 +1,5 @@
+stats:
+  action-weights:
+    view: 0.4
+    register: 0.8
+    like: 1.0

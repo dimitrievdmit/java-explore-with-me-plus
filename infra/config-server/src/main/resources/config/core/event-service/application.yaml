@@ -11,7 +11,6 @@ spring:
   sql:
     init:
       mode: always
-      continue-on-error: true
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
@@ -27,9 +26,6 @@ spring:
             connect-timeout: 5000   # 5 секунд на установление соединения
             read-timeout: 20000     # 10 секунд на ожидание ответа
           request-service:
-            connect-timeout: 5000   # 5 секунд на установление соединения
-            read-timeout: 20000     # 10 секунд на ожидание ответа
-          stat-server:
             connect-timeout: 5000   # 5 секунд на установление соединения
             read-timeout: 20000     # 10 секунд на ожидание ответа
 resilience4j:
@@ -53,8 +49,14 @@ resilience4j:
         base-config: default
       request-service:
         base-config: default
-      stat-server:
+      collector:
         base-config: default
+        minimum-number-of-calls: 2
+        sliding-window-size: 4
+      analyzer:
+        base-config: default
+        minimum-number-of-calls: 2
+        sliding-window-size: 4
   timelimiter:
     configs:
       default:
@@ -64,5 +66,30 @@ resilience4j:
         base-config: default
       request-service:
         base-config: default
-      stat-server:
+      collector:
         base-config: default
+        timeout-duration: 1s
+      analyzer:
+        base-config: default
+        timeout-duration: 2s
+grpc:
+  client:
+    collector:
+      address: discovery:///collector
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+      negotiationType: plaintext
+      deadline-ms: 1000
+    analyzer:
+      address: discovery:///analyzer
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+      negotiationType: plaintext
+      deadline-ms: 2000
+kafka:
+  bootstrap-servers: localhost:9092
+  topics:
+    event-ratings: stats.event-ratings.v1
+  consumer:
+    group-id: event-service-ratings
+    auto-offset-reset: earliest

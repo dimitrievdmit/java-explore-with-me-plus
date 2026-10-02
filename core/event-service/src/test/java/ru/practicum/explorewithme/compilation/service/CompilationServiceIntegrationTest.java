@@ -3,11 +3,14 @@ package ru.practicum.explorewithme.compilation.service;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.explorewithme.compilation.dto.CompilationDto;
 import ru.practicum.explorewithme.compilation.dto.NewCompilationDto;
 import ru.practicum.explorewithme.compilation.dto.UpdateCompilationRequestDto;
+import ru.practicum.explorewithme.interaction.grpc.AnalyzerGrpcClient;
+import ru.practicum.explorewithme.interaction.grpc.CollectorGrpcClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -18,6 +21,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class CompilationServiceIntegrationTest {
     @Autowired
     private CompilationService compilationService;
+
+    @MockBean
+    private AnalyzerGrpcClient analyzerGrpcClient;
+    @MockBean
+    private CollectorGrpcClient collectorGrpcClient;
 
     @Test
     void create_ShouldCreateCompilation() {

@@ -29,12 +29,12 @@ class EventShortDtoJsonTest {
                 .initiator(new UserShortDto(3L, "Иван Иванов"))
                 .paid(false)
                 .title("Short title")
-                .views(10L)
+                .rating(10.0)
                 .build();
 
         var json = jacksonTester.write(dto);
         assertThat(json).hasJsonPathStringValue("$.title");
-        assertThat(json).extractingJsonPathNumberValue("$.views").isEqualTo(10);
+        assertThat(json).extractingJsonPathNumberValue("$.rating").isEqualTo(10.0);
     }
 
     @Test
@@ -48,10 +48,11 @@ class EventShortDtoJsonTest {
                 + "    \"initiator\": { \"id\": 3, \"name\": \"Иван Иванов\" },\n"
                 + "    \"paid\": false,\n"
                 + "    \"title\": \"Short title\",\n"
-                + "    \"views\": 10\n"
+                + "    \"rating\": 10\n"
                 + "}";
         var dto = jacksonTester.parse(content).getObject();
         assertThat(dto.getTitle()).isEqualTo("Short title");
         assertThat(dto.getPaid()).isFalse();
+        assertThat(dto.getRating()).isEqualTo(10.0);
     }
 }

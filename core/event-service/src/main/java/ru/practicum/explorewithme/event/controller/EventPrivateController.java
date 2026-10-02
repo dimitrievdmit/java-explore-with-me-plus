@@ -1,8 +1,11 @@
 package ru.practicum.explorewithme.event.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.explorewithme.event.dto.NewEventDto;
 import ru.practicum.explorewithme.event.dto.UpdateEventUserRequest;
@@ -14,6 +17,7 @@ import java.util.List;
 
 @SuppressWarnings("unused")
 @RestController
+@Validated
 @RequestMapping("/users/{userId}/events")
 @RequiredArgsConstructor
 public class EventPrivateController {
@@ -28,8 +32,8 @@ public class EventPrivateController {
 
     @GetMapping
     public List<EventShortDto> getEvents(@PathVariable Long userId,
-                                         @RequestParam(defaultValue = "0") int from,
-                                         @RequestParam(defaultValue = "10") int size) {
+                                         @RequestParam(defaultValue = "0") @PositiveOrZero int from,
+                                         @RequestParam(defaultValue = "10") @Positive int size) {
         return eventService.getEvents(userId, from, size);
     }
 

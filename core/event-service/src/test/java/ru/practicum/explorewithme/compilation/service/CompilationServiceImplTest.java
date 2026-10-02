@@ -63,12 +63,9 @@ class CompilationServiceImplTest {
     void update_ShouldReturnUpdatedCompilation() {
         UpdateCompilationRequestDto request = new UpdateCompilationRequestDto("Updated", false, List.of());
         when(compilationRepository.findById(1L)).thenReturn(Optional.of(compilation));
-        when(compilationRepository.save(any(Compilation.class))).thenReturn(compilation);
-
         CompilationDto result = compilationService.update(1L, request);
 
         assertThat(result).isNotNull();
-        verify(compilationRepository).save(any(Compilation.class));
     }
 
     @Test

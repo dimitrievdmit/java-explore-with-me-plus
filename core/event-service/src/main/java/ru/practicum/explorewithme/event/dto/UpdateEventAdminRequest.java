@@ -1,5 +1,6 @@
 package ru.practicum.explorewithme.event.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -23,6 +24,7 @@ public class UpdateEventAdminRequest {
 
     String eventDate;
 
+    @Valid
     GeoPointDto location;
 
     Boolean paid;

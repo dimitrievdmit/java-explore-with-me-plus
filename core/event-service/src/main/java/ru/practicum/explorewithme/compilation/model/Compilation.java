@@ -17,15 +17,16 @@ import java.util.Set;
 public class Compilation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
     @Setter
     @NotBlank
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(name = "title", nullable = false, unique = true, length = 50)
     private String title;
 
     @Setter
-    @Column(nullable = false)
+    @Column(name = "pinned", nullable = false)
     private Boolean pinned;
 
     @Setter

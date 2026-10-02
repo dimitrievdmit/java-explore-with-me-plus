@@ -1,5 +1,6 @@
 package ru.practicum.explorewithme.request.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.explorewithme.request.dto.EventRequestStatusUpdateRequest;
@@ -26,7 +27,7 @@ public class EventRequestPrivateController {
     @PatchMapping
     public EventRequestStatusUpdateResult updateEventRequests(@PathVariable Long userId,
                                                               @PathVariable Long eventId,
-                                                              @RequestBody EventRequestStatusUpdateRequest request) {
+                                                              @Valid @RequestBody EventRequestStatusUpdateRequest request) {
         return eventRequestService.updateEventRequests(userId, eventId, request);
     }
 }

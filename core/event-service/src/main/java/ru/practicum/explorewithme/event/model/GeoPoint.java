@@ -12,9 +12,9 @@ import lombok.experimental.FieldDefaults;
 @Setter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class GeoPoint {
-    @Column(nullable = false)
+    @Column(name = "lat", nullable = false)
     Float lat;
 
-    @Column(nullable = false)
+    @Column(name = "lon", nullable = false)
     Float lon;
 }

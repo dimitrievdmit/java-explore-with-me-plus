@@ -84,8 +84,6 @@ class CategoryServiceImplTest {
         Category category1 = new Category(catId, "updated category");
         Mockito.when(categoryRepository.findById(any()))
                 .thenReturn(Optional.ofNullable(category));
-        Mockito.when(categoryRepository.save(any()))
-                .thenReturn(category1);
 
         CategoryDto dto = categoryService.changeCategory(catId, request1);
         Assertions.assertEquals(dto.getId(), request1.getId());

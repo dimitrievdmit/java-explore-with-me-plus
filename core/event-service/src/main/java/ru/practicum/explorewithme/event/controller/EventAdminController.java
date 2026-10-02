@@ -1,8 +1,11 @@
 package ru.practicum.explorewithme.event.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.explorewithme.event.dto.EventSearchParamsAdmin;
 import ru.practicum.explorewithme.event.dto.UpdateEventAdminRequest;
@@ -15,6 +18,7 @@ import java.util.List;
 
 @SuppressWarnings("unused")
 @RestController
+@Validated
 @RequestMapping("/admin/events")
 @RequiredArgsConstructor
 public class EventAdminController {
@@ -26,8 +30,8 @@ public class EventAdminController {
                                         @RequestParam(required = false) List<Long> categories,
                                         @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime rangeStart,
                                         @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime rangeEnd,
-                                        @RequestParam(defaultValue = "0") int from,
-                                        @RequestParam(defaultValue = "10") int size) {
+                                        @RequestParam(defaultValue = "0") @PositiveOrZero int from,
+                                        @RequestParam(defaultValue = "10") @Positive int size) {
         EventSearchParamsAdmin params = EventSearchParamsAdmin.builder()
                 .users(users)
                 .states(states)

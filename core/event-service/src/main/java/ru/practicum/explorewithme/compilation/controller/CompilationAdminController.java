@@ -1,5 +1,6 @@
 package ru.practicum.explorewithme.compilation.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -18,14 +19,14 @@ public class CompilationAdminController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CompilationDto createCompilation(@RequestBody NewCompilationDto dto) {
+    public CompilationDto createCompilation(@Valid @RequestBody NewCompilationDto dto) {
         log.info("Создание подборки: {}", dto.getTitle());
         return compilationService.create(dto);
     }
 
     @PatchMapping("/{compId}")
     @ResponseStatus(HttpStatus.OK)
-    public CompilationDto updateCompilation(@PathVariable Long compId, @RequestBody UpdateCompilationRequestDto request) {
+    public CompilationDto updateCompilation(@PathVariable Long compId, @Valid @RequestBody UpdateCompilationRequestDto request) {
         log.info("Обновление подборки: {}", compId);
         return compilationService.update(compId, request);
     }

@@ -16,10 +16,11 @@ public class Category {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
     @Size(max = 50)
     @NotBlank
-    @Column(unique = true)
+    @Column(name = "name", nullable = false, length = 50, unique = true)
     private String name;
 }

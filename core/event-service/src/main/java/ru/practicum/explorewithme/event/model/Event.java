@@ -18,9 +18,10 @@ import java.time.LocalDateTime;
 public class Event {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     Long id;
 
-    @Column(nullable = false, length = 2000)
+    @Column(name = "annotation", nullable = false, length = 2000)
     String annotation;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -30,7 +31,7 @@ public class Event {
     @Column(name = "created_on", nullable = false)
     LocalDateTime createdOn;
 
-    @Column(nullable = false, length = 7000)
+    @Column(name = "description", nullable = false, length = 7000)
     String description;
 
     @Column(name = "event_date", nullable = false)
@@ -42,7 +43,7 @@ public class Event {
     @Embedded
     GeoPoint location;
 
-    @Column(nullable = false)
+    @Column(name = "paid", nullable = false)
     Boolean paid;
 
     @Column(name = "participant_limit", nullable = false)
@@ -52,11 +53,14 @@ public class Event {
     Boolean requestModeration;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "state", nullable = false)
     EventState state;
 
-    @Column(nullable = false, length = 120)
+    @Column(name = "title", nullable = false, length = 120)
     String title;
+
+    @Column(name = "rating", nullable = false)
+    Double rating = 0.0;
 
     @Column(name = "published_on")
     LocalDateTime publishedOn;

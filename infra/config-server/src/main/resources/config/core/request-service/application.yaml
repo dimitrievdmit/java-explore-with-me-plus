@@ -11,7 +11,6 @@ spring:
   sql:
     init:
       mode: always
-      continue-on-error: true
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
@@ -50,6 +49,10 @@ resilience4j:
         base-config: default
       event-service:
         base-config: default
+      collector:
+        base-config: default
+        minimum-number-of-calls: 2
+        sliding-window-size: 4
   timelimiter:
     configs:
       default:
@@ -59,3 +62,14 @@ resilience4j:
         base-config: default
       event-service:
         base-config: default
+      collector:
+        base-config: default
+        timeout-duration: 1s
+grpc:
+  client:
+    collector:
+      address: discovery:///collector
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+      negotiationType: plaintext
+      deadline-ms: 1000

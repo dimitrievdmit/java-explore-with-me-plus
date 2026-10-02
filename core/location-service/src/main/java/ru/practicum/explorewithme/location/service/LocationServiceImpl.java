@@ -46,7 +46,6 @@ public class LocationServiceImpl implements LocationService {
             throw new ConflictException("Название для локации " + request.getName() + " уже существует");
         }
         LocationMapper.updateEntity(request, location);
-        location = locationRepository.save(location);
         return LocationMapper.toDto(location);
     }
 

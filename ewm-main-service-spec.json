@@ -1135,7 +1135,7 @@
             }
           },
           {
-            "description": "Вариант сортировки: по дате события или по количеству просмотров",
+            "description": "Вариант сортировки: по дате события или по рейтингу",
             "in": "query",
             "name": "sort",
             "required": false,
@@ -1143,7 +1143,7 @@
               "type": "string",
               "enum": [
                 "EVENT_DATE",
-                "VIEWS"
+                "RATING"
               ]
             }
           },
@@ -1983,6 +1983,98 @@
           "Private: Запросы на участие"
         ]
       }
+    },
+    "/events/recommendations": {
+      "get": {
+        "operationId": "getRecommendations",
+        "parameters": [
+          {
+            "name": "X-EWM-USER-ID",
+            "in": "header",
+            "required": true,
+            "description": "id текущего пользователя",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Рекомендации найдены",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventShortDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Получение рекомендаций для пользователя",
+        "tags": [
+          "Public: События"
+        ]
+      }
+    },
+    "/events/{eventId}/like": {
+      "put": {
+        "operationId": "likeEvent",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "description": "id события",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "X-EWM-USER-ID",
+            "in": "header",
+            "required": true,
+            "description": "id текущего пользователя",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Лайк сохранен"
+          },
+          "400": {
+            "description": "Пользователь не посещал событие",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Событие не найдено или не опубликовано",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Поставить лайк мероприятию",
+        "tags": [
+          "Public: События"
+        ]
+      }
     }
   },
   "components": {
@@ -2278,11 +2370,10 @@
             "description": "Заголовок",
             "example": "Знаменитое шоу 'Летающая кукуруза'"
           },
-          "views": {
-            "type": "integer",
-            "description": "Количество просмотрев события",
-            "format": "int64",
-            "example": 999
+          "rating": {
+            "type": "number",
+            "format": "double",
+            "description": "Рейтинг мероприятия"
           }
         }
       },
@@ -2382,11 +2473,10 @@
             "description": "Заголовок",
             "example": "Знаменитое шоу 'Летающая кукуруза'"
           },
-          "views": {
-            "type": "integer",
-            "description": "Количество просмотрев события",
-            "format": "int64",
-            "example": 999
+          "rating": {
+            "type": "number",
+            "format": "double",
+            "description": "Рейтинг мероприятия"
           }
         },
         "description": "Краткая информация о событии",

@@ -34,3 +34,6 @@ eureka:
     enabled: false
     registerWithEureka: false
     fetchRegistry: false
+kafka:
+  consumer:
+    enabled: false

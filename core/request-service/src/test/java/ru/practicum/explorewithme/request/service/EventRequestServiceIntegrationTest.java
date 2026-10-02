@@ -11,6 +11,7 @@ import ru.practicum.explorewithme.interaction.dto.EventState;
 import ru.practicum.explorewithme.interaction.dto.UserShortDto;
 import ru.practicum.explorewithme.interaction.feign.EventClient;
 import ru.practicum.explorewithme.interaction.feign.UserClient;
+import ru.practicum.explorewithme.interaction.grpc.CollectorGrpcClient;
 import ru.practicum.explorewithme.request.dto.ParticipationRequestDto;
 
 import java.util.List;
@@ -29,6 +30,8 @@ class EventRequestServiceIntegrationTest {
     private EventClient eventClient;
     @MockBean
     private UserClient userClient;
+    @MockBean
+    private CollectorGrpcClient collectorGrpcClient;
 
     private static final Long INITIATOR_ID = 1L;
     private static final Long EVENT_ID = 100L;

@@ -15,13 +15,13 @@ public class NewLocationRequest {
     String name;
 
     @NotNull
-    @Min(-90)
-    @Max(90)
+    @DecimalMin("-90")
+    @DecimalMax("90")
     Float lat;
 
     @NotNull
-    @Min(-180)
-    @Max(180)
+    @DecimalMin("-180")
+    @DecimalMax("180")
     Float lon;
 
     @NotNull
